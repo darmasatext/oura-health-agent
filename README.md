@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![GCP](https://img.shields.io/badge/GCP-Cloud%20Run-4285F4.svg)](https://cloud.google.com/run)
 [![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
-[![Cost](https://img.shields.io/badge/cost-$0.10%2Fmonth-success.svg)](#cost-analysis)
+[![Cost](https://img.shields.io/badge/cost-~$0.12%2Fmonth-success.svg)](#cost-analysis)
 
 > 🇬🇧 **English** | 🇪🇸 **[Español](#español)**
 
@@ -102,13 +102,16 @@ gcloud scheduler jobs create http oura-scheduler \
 
 ## Cost Analysis
 
-| Service | Usage | Cost |
-|---------|-------|------|
-| Cloud Run | 48 runs/day | $0 (free tier) |
-| BigQuery Storage | ~2.5 MB/year | $0.0006/mo |
-| BigQuery Queries | ~10/day | $0 (free tier) |
-| Cloud Scheduler | 1 job | $0.10/mo |
-| **Total** | | **~$0.10/month** |
+| Service | Usage | Cost (USD) |
+|---------|-------|------------|
+| Cloud Run | 48 runs/day (~1,440/month) | $0 (free tier: 2M/month) |
+| BigQuery Storage | ~2.5 MB/year | $0.022/month |
+| BigQuery Queries | ~10/day (~5 KB each) | $0 (free tier: 1 TB/month) |
+| Cloud Scheduler | 1 job | $0.10/month |
+| Secret Manager | 3 secrets, 288 accesses/day | $0 (free tier: 10K/month) |
+| **Total** | | **~$0.12/month** |
+
+*Exchange rate: 1 USD = 17.92 MXN (2026-03-23)*
 
 ---
 
@@ -213,13 +216,16 @@ gcloud scheduler jobs create http oura-scheduler \
 
 ## Análisis de Costos
 
-| Servicio | Uso | Costo |
-|----------|-----|-------|
-| Cloud Run | 48 ejecuciones/día | $0 (free tier) |
-| BigQuery Storage | ~2.5 MB/año | $0.0006/mes |
-| BigQuery Queries | ~10/día | $0 (free tier) |
-| Cloud Scheduler | 1 job | $0.10/mes |
-| **Total** | | **~$0.10/mes** |
+| Servicio | Uso | Costo (USD) | Costo (MXN) |
+|----------|-----|-------------|-------------|
+| Cloud Run | 48 ejecuciones/día (~1,440/mes) | $0 (free tier: 2M/mes) | $0 |
+| BigQuery Storage | ~2.5 MB/año | $0.022/mes | $0.39/mes |
+| BigQuery Queries | ~10/día (~5 KB c/u) | $0 (free tier: 1 TB/mes) | $0 |
+| Cloud Scheduler | 1 job | $0.10/mes | $1.79/mes |
+| Secret Manager | 3 secrets, 288 accesos/día | $0 (free tier: 10K/mes) | $0 |
+| **Total** | | **~$0.12/mes** | **~$2.18/mes** |
+
+*Tipo de cambio: 1 USD = 17.92 MXN (23 marzo 2026)*
 
 ---
 
