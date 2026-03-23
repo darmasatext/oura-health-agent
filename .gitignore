@@ -1,0 +1,11 @@
+
+# OpenClaw agent configuration (NEVER push)
+AGENTS.md
+SOUL.md
+TOOLS.md
+USER.md
+IDENTITY.md
+HEARTBEAT.md
+memory/
+BOOTSTRAP.md
+WORKFLOW_AUTO.md
