@@ -8,7 +8,7 @@ from google.cloud import bigquery
 OURA_TOKEN = os.getenv('OURA_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-PROJECT_ID = "last-240000"
+PROJECT_ID = "your-gcp-project-id"
 DATASET_ID = "oura_biometrics"
 TABLE_ID = "daily_biometrics_gold"
 

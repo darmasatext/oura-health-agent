@@ -2,7 +2,7 @@
 -- Table: oura_biometrics.daily_biometrics_gold
 -- Description: Consolidated daily health metrics from Oura Ring API
 
-CREATE TABLE IF NOT EXISTS `last-240000.oura_biometrics.daily_biometrics_gold` (
+CREATE TABLE IF NOT EXISTS `your-gcp-project-id.oura_biometrics.daily_biometrics_gold` (
   -- Date & Metadata
   calendar_date DATE NOT NULL,
   ingestion_timestamp TIMESTAMP NOT NULL,
@@ -53,7 +53,7 @@ OPTIONS(
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_calendar_date
-ON `last-240000.oura_biometrics.daily_biometrics_gold` (calendar_date DESC);
+ON `your-gcp-project-id.oura_biometrics.daily_biometrics_gold` (calendar_date DESC);
 
 -- Sample query: Last 7 days
 -- SELECT 
@@ -63,6 +63,6 @@ ON `last-240000.oura_biometrics.daily_biometrics_gold` (calendar_date DESC);
 --   activity_score,
 --   steps,
 --   total_sleep_seconds / 3600.0 AS sleep_hours
--- FROM `last-240000.oura_biometrics.daily_biometrics_gold`
+-- FROM `your-gcp-project-id.oura_biometrics.daily_biometrics_gold`
 -- WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
 -- ORDER BY calendar_date DESC;
