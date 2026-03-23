@@ -1,9 +1,24 @@
 # Oura Health Agent - BigQuery Analytics Pipeline
 
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/darmasatext/oura-health-agent/releases/tag/v1.5.0)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![GCP](https://img.shields.io/badge/GCP-Cloud%20Run-4285F4.svg)](https://cloud.google.com/run)
+[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
+[![Cost](https://img.shields.io/badge/cost-$0.10%2Fmonth-success.svg)](README.md#cost-analysis-v150)
+
 ## 🚀 Version 1.5.0 - Enhanced Metrics & Performance
 
 **New in v1.5.0:**
 - 📊 **51 metrics** (up from 23) - Added HRV, resilience, 9 readiness contributors
+- ⚡ **48 syncs/day** (every 30 minutes, up from 2x/day)
+- 🗄️ **BigQuery partitioning + clustering** (70% faster queries, 50% cost reduction)
+- 🔔 **Smart notifications** (daily summary mode, 98% spam reduction)
+- 💰 **Cost: $0.00 incremental** (100% within free tier)
+
+[See CHANGELOG.md for full details]
+
+---
+
 - ⚡ **48 syncs/day** (every 30 minutes, up from 2x/day)
 - 🗄️ **BigQuery partitioning + clustering** (70% faster queries, 50% cost reduction)
 - 🔔 **Smart notifications** (daily summary mode, 98% spam reduction)
