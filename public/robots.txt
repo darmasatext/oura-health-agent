@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://oura-dashboard.vercel.app/sitemap.xml
