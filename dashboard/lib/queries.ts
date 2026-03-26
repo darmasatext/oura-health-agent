@@ -2,7 +2,7 @@ import { query } from './bigquery-wrapper';
 
 const DATASET = process.env.BIGQUERY_DATASET || 'oura_biometrics';
 const TABLE = process.env.BIGQUERY_TABLE || 'daily_biometrics_gold';
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'last-240000';
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'your-project-id';
 
 // Query: Últimos 7 días
 export async function getLast7Days() {
