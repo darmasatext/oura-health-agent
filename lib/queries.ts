@@ -1,0 +1,853 @@
+import { query } from './bigquery-wrapper';
+
+const DATASET = process.env.BIGQUERY_DATASET || 'oura_biometrics';
+const TABLE = process.env.BIGQUERY_TABLE || 'daily_biometrics_v2';
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'last-240000';
+
+// Query: Últimos 7 días
+export async function getLast7Days() {
+  const sql = `
+    SELECT 
+      calendar_date,
+      sleep_score,
+      readiness_score,
+      activity_score,
+      steps,
+      lowest_heart_rate,
+      average_heart_rate
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    ORDER BY calendar_date DESC
+    LIMIT 7
+  `;
+  
+  const rows = await query(sql);
+  return rows;
+}
+
+// Query: Promedios últimos 7 días vs 7 días anteriores (WoW)
+export async function getWeekOverWeekStats(startDate?: string, endDate?: string) {
+  // Si no se proporcionan fechas, usar últimos 7 días
+  const hasCustomDates = startDate && endDate;
+  
+  const sql = hasCustomDates ? `
+    WITH current_period AS (
+      SELECT 
+        AVG(sleep_score) as avg_sleep,
+        AVG(readiness_score) as avg_readiness,
+        AVG(activity_score) as avg_activity,
+        SUM(steps) as total_steps,
+        DATE_DIFF('${endDate}', '${startDate}', DAY) + 1 as days_count
+      FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+      WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
+    ),
+    previous_period AS (
+      SELECT 
+        AVG(sleep_score) as avg_sleep,
+        AVG(readiness_score) as avg_readiness,
+        AVG(activity_score) as avg_activity,
+        SUM(steps) as total_steps
+      FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+      WHERE calendar_date >= DATE_SUB('${startDate}', INTERVAL (DATE_DIFF('${endDate}', '${startDate}', DAY) + 1) DAY)
+        AND calendar_date < '${startDate}'
+    )
+    SELECT 
+      c.avg_sleep as current_sleep,
+      p.avg_sleep as previous_sleep,
+      IFNULL(((c.avg_sleep - p.avg_sleep) / NULLIF(p.avg_sleep, 0) * 100), 0) as sleep_change,
+      c.avg_readiness as current_readiness,
+      p.avg_readiness as previous_readiness,
+      IFNULL(((c.avg_readiness - p.avg_readiness) / NULLIF(p.avg_readiness, 0) * 100), 0) as readiness_change,
+      c.avg_activity as current_activity,
+      p.avg_activity as previous_activity,
+      c.total_steps as current_steps,
+      p.total_steps as previous_steps
+    FROM current_period c, previous_period p
+  ` : `
+    WITH current_week AS (
+      SELECT 
+        AVG(sleep_score) as avg_sleep,
+        AVG(readiness_score) as avg_readiness,
+        AVG(activity_score) as avg_activity,
+        SUM(steps) as total_steps
+      FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+      WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+    ),
+    previous_week AS (
+      SELECT 
+        AVG(sleep_score) as avg_sleep,
+        AVG(readiness_score) as avg_readiness,
+        AVG(activity_score) as avg_activity,
+        SUM(steps) as total_steps
+      FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+      WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY)
+        AND calendar_date < DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+    )
+    SELECT 
+      c.avg_sleep as current_sleep,
+      p.avg_sleep as previous_sleep,
+      IFNULL(((c.avg_sleep - p.avg_sleep) / NULLIF(p.avg_sleep, 0) * 100), 0) as sleep_change,
+      c.avg_readiness as current_readiness,
+      p.avg_readiness as previous_readiness,
+      IFNULL(((c.avg_readiness - p.avg_readiness) / NULLIF(p.avg_readiness, 0) * 100), 0) as readiness_change,
+      c.avg_activity as current_activity,
+      p.avg_activity as previous_activity,
+      c.total_steps as current_steps,
+      p.total_steps as previous_steps
+    FROM current_week c, previous_week p
+  `;
+  
+  const rows = await query(sql);
+  return rows[0];
+}
+
+// Query: Datos de sueño por rango de fechas
+export async function getSleepData(startDate: string, endDate: string) {
+  const sql = `
+    SELECT 
+      calendar_date,
+      sleep_score,
+      total_sleep_seconds,
+      ROUND(total_sleep_seconds / 3600.0, 1) as total_hours,
+      ROUND(total_sleep_seconds / 3600.0, 1) as total_sleep_hours,
+      total_sleep_seconds as total_sleep_duration,
+      ROUND(deep_sleep_seconds / 60.0, 0) as deep_sleep_min,
+      ROUND(deep_sleep_seconds / 60.0, 0) as deep_sleep_minutes,
+      deep_sleep_seconds as deep_sleep_duration,
+      ROUND(rem_sleep_seconds / 60.0, 0) as rem_sleep_min,
+      ROUND(rem_sleep_seconds / 60.0, 0) as rem_sleep_minutes,
+      rem_sleep_seconds as rem_sleep_duration,
+      ROUND(light_sleep_seconds / 60.0, 0) as light_sleep_min,
+      light_sleep_seconds as light_sleep_duration,
+      ROUND(sleep_efficiency_pct, 0) as efficiency,
+      ROUND(sleep_latency_seconds / 60.0, 0) as latency_min,
+      bed_time_start,
+      bed_time_end
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
+      AND sleep_score IS NOT NULL
+    ORDER BY calendar_date ASC
+  `;
+  
+  const rows = await query(sql);
+  return rows;
+}
+
+// Query: Promedios de sueño
+export async function getSleepAverages(days: number = 30, startDate?: string, endDate?: string) {
+  // Si hay fechas específicas, usarlas; sino calcular desde hoy
+  const dateFilter = (startDate && endDate)
+    ? `calendar_date BETWEEN '${startDate}' AND '${endDate}'`
+    : `calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)`;
+    
+  const sql = `
+    SELECT 
+      AVG(sleep_score) as avg_score,
+      AVG(total_sleep_seconds / 3600.0) as avg_hours,
+      AVG(deep_sleep_seconds / 3600.0) as avg_deep_hours,
+      AVG(deep_sleep_seconds / 60.0) as avg_deep,
+      AVG(rem_sleep_seconds / 3600.0) as avg_rem_hours,
+      AVG(rem_sleep_seconds / 60.0) as avg_rem,
+      AVG(sleep_efficiency_pct) as avg_efficiency,
+      COUNT(*) as total_nights,
+      SUM(CASE WHEN total_sleep_seconds / 3600.0 >= 7 THEN 1 ELSE 0 END) as nights_over_7h
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE ${dateFilter}
+      AND sleep_score IS NOT NULL
+  `;
+  
+  const rows = await query(sql);
+  return rows[0];
+}
+
+// Comparación Week over Week detallada
+export async function getWeekOverWeekComparison() {
+  const sql = `
+    WITH current_week AS (
+      SELECT 
+        AVG(sleep_score) as sleep,
+        AVG(readiness_score) as readiness,
+        AVG(activity_score) as activity,
+        AVG(total_sleep_seconds / 3600.0) as hours,
+        AVG(sleep_efficiency_pct) as efficiency,
+        AVG(lowest_heart_rate) as hr,
+        SUM(steps) as steps
+      FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+      WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+    ),
+    previous_week AS (
+      SELECT 
+        AVG(sleep_score) as sleep,
+        AVG(readiness_score) as readiness,
+        AVG(activity_score) as activity,
+        AVG(total_sleep_seconds / 3600.0) as hours,
+        AVG(sleep_efficiency_pct) as efficiency,
+        AVG(lowest_heart_rate) as hr,
+        SUM(steps) as steps
+      FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+      WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY)
+        AND calendar_date < DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+    )
+    SELECT 
+      "Calidad de Sueño" as metric,
+      c.sleep as current_value,
+      p.sleep as previous_value,
+      ((c.sleep - p.sleep) / NULLIF(p.sleep, 0) * 100) as change_pct,
+      "/100" as unit
+    FROM current_week c, previous_week p
+    UNION ALL
+    SELECT 
+      "Recuperación",
+      c.readiness,
+      p.readiness,
+      ((c.readiness - p.readiness) / NULLIF(p.readiness, 0) * 100),
+      "/100"
+    FROM current_week c, previous_week p
+    UNION ALL
+    SELECT 
+      "Actividad",
+      c.activity,
+      p.activity,
+      ((c.activity - p.activity) / NULLIF(p.activity, 0) * 100),
+      "/100"
+    FROM current_week c, previous_week p
+    UNION ALL
+    SELECT 
+      "Horas de Sueño",
+      c.hours,
+      p.hours,
+      ((c.hours - p.hours) / NULLIF(p.hours, 0) * 100),
+      "h"
+    FROM current_week c, previous_week p
+    UNION ALL
+    SELECT 
+      "Eficiencia del Sueño",
+      c.efficiency,
+      p.efficiency,
+      ((c.efficiency - p.efficiency) / NULLIF(p.efficiency, 0) * 100),
+      "%"
+    FROM current_week c, previous_week p
+    UNION ALL
+    SELECT 
+      "Frecuencia Cardíaca",
+      c.hr,
+      p.hr,
+      ((c.hr - p.hr) / NULLIF(p.hr, 0) * 100),
+      "bpm"
+    FROM current_week c, previous_week p
+    UNION ALL
+    SELECT 
+      "Pasos Totales",
+      c.steps,
+      p.steps,
+      ((c.steps - p.steps) / NULLIF(p.steps, 0) * 100),
+      "pasos"
+    FROM current_week c, previous_week p
+  `;
+  
+  const rows = await query(sql);
+  return rows;
+}
+
+// Comparación últimos 7 días vs promedio histórico
+export async function getCurrentVsHistorical() {
+  const sql = `
+    WITH current_period AS (
+      SELECT 
+        AVG(sleep_score) as sleep,
+        AVG(readiness_score) as readiness,
+        AVG(activity_score) as activity,
+        AVG(total_sleep_seconds / 3600.0) as hours
+      FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+      WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+    ),
+    historical AS (
+      SELECT 
+        AVG(sleep_score) as sleep,
+        AVG(readiness_score) as readiness,
+        AVG(activity_score) as activity,
+        AVG(total_sleep_seconds / 3600.0) as hours
+      FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+      WHERE calendar_date < DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+    )
+    SELECT 
+      c.sleep as current_sleep,
+      h.sleep as historical_sleep,
+      c.readiness as current_readiness,
+      h.readiness as historical_readiness,
+      c.activity as current_activity,
+      h.activity as historical_activity,
+      c.hours as current_hours,
+      h.hours as historical_hours
+    FROM current_period c, historical h
+  `;
+  
+  const rows = await query(sql);
+  return rows[0];
+}
+
+// Query: Datos de recuperación por rango de fechas
+export async function getRecoveryData(startDate: string, endDate: string) {
+  const sql = `
+    SELECT 
+      calendar_date,
+      readiness_score,
+      average_heart_rate,
+      lowest_heart_rate,
+      temperature_deviation_celsius,
+      resilience_level
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
+      AND readiness_score IS NOT NULL
+    ORDER BY calendar_date ASC
+  `;
+  
+  const rows = await query(sql);
+  return rows;
+}
+
+// Query: Promedios de recuperación
+export async function getRecoveryAverages(days: number = 30, startDate?: string, endDate?: string) {
+  // Si hay fechas específicas, usarlas; sino calcular desde hoy
+  const dateFilter = (startDate && endDate)
+    ? `calendar_date BETWEEN '${startDate}' AND '${endDate}'`
+    : `calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)`;
+    
+  const sql = `
+    SELECT 
+      AVG(readiness_score) as avg_readiness,
+      AVG(average_heart_rate) as avg_hr_avg,
+      AVG(lowest_heart_rate) as avg_hr,
+      AVG(temperature_deviation_celsius) as avg_temp,
+      COUNT(*) as total_days,
+      SUM(CASE WHEN readiness_score >= 85 THEN 1 ELSE 0 END) as excellent_days,
+      SUM(CASE WHEN resilience_level = 'strong' THEN 1 ELSE 0 END) as strong_days
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE ${dateFilter}
+      AND readiness_score IS NOT NULL
+  `;
+  
+  const rows = await query(sql);
+  return rows[0];
+}
+
+// Query: Datos de actividad por rango de fechas
+export async function getActivityData(startDate: string, endDate: string) {
+  const sql = `
+    SELECT 
+      calendar_date,
+      activity_score,
+      steps,
+      active_calories,
+      total_calories,
+      sedentary_time_seconds,
+      equivalent_walking_distance_meters
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
+      AND activity_score IS NOT NULL
+    ORDER BY calendar_date ASC
+    LIMIT 100
+  `;
+  
+  const rows = await query(sql);
+  return rows;
+}
+
+// Query: Totales de actividad
+export async function getActivityTotals(days: number = 30) {
+  const sql = `
+    SELECT 
+      AVG(activity_score) as avg_activity,
+      SUM(steps) as total_steps,
+      SUM(active_calories) as total_calories,
+      AVG(sedentary_time_seconds / 3600.0) as avg_sedentary_hours,
+      SUM(equivalent_walking_distance_meters) as total_distance_meters,
+      COUNT(*) as total_days,
+      SUM(CASE WHEN steps >= 10000 THEN 1 ELSE 0 END) as days_met_goal
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+      AND activity_score IS NOT NULL
+  `;
+  
+  const rows = await query(sql);
+  return rows[0];
+}
+
+// Query: Día más activo
+export async function getMostActiveDay(days: number = 30) {
+  const sql = `
+    SELECT 
+      calendar_date,
+      steps,
+      activity_score
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+      AND steps IS NOT NULL
+    ORDER BY steps DESC
+    LIMIT 1
+  `;
+  
+  const rows = await query(sql);
+  return rows[0];
+}
+
+// ===== NUEVAS QUERIES PARA HEALTH INSIGHTS WIDGETS =====
+
+// Query: HRV más reciente para HRVAlertWidget
+export async function getLatestHRV(endDate?: string) {
+  const dateFilter = endDate 
+    ? `AND calendar_date <= '${endDate}'`
+    : '';
+    
+  const sql = `
+    SELECT 
+      calendar_date,
+      average_hrv_ms as hrv,
+      readiness_score,
+      sleep_score
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE average_hrv_ms IS NOT NULL
+      ${dateFilter}
+    ORDER BY calendar_date DESC
+    LIMIT 1
+  `;
+  
+  const rows = await query(sql);
+  return rows[0];
+}
+
+// Query: Datos para SleepScorecardWidget (noche más reciente o en rango)
+export async function getLatestSleepScorecard(startDate?: string, endDate?: string) {
+  const hasDateRange = startDate && endDate;
+  
+  const sql = hasDateRange ? `
+    SELECT 
+      MAX(calendar_date) as calendar_date,
+      ROUND(AVG(total_sleep_seconds / 3600.0), 2) as duration_hours,
+      ROUND(AVG(deep_sleep_seconds / 60.0), 0) as deep_sleep_minutes,
+      ROUND(AVG(rem_sleep_seconds / 60.0), 0) as rem_sleep_minutes,
+      AVG(average_hrv_ms) as hrv,
+      AVG(sleep_score) as sleep_score,
+      AVG(sleep_efficiency_pct) as efficiency
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE sleep_score IS NOT NULL
+      AND total_sleep_seconds IS NOT NULL
+      AND calendar_date BETWEEN '${startDate}' AND '${endDate}'
+  ` : `
+    SELECT 
+      calendar_date,
+      ROUND(total_sleep_seconds / 3600.0, 2) as duration_hours,
+      ROUND(deep_sleep_seconds / 60.0, 0) as deep_sleep_minutes,
+      ROUND(rem_sleep_seconds / 60.0, 0) as rem_sleep_minutes,
+      average_hrv_ms as hrv,
+      sleep_score,
+      sleep_efficiency_pct as efficiency
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE sleep_score IS NOT NULL
+      AND total_sleep_seconds IS NOT NULL
+    ORDER BY calendar_date DESC
+    LIMIT 1
+  `;
+  
+  const rows = await query(sql);
+  return rows[0];
+}
+
+// Query: Patrón semanal por día de la semana (para WeeklyPatternWidget)
+export async function getWeeklyPattern(startDate?: string, endDate?: string, weeks: number = 4) {
+  const hasDateRange = startDate && endDate;
+  
+  const dateFilter = hasDateRange
+    ? `calendar_date BETWEEN '${startDate}' AND '${endDate}'`
+    : `calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${weeks * 7} DAY)`;
+    
+  const sql = `
+    SELECT 
+      FORMAT_DATE('%A', calendar_date) as day_name_en,
+      CASE FORMAT_DATE('%A', calendar_date)
+        WHEN 'Monday' THEN 'Lunes'
+        WHEN 'Tuesday' THEN 'Martes'
+        WHEN 'Wednesday' THEN 'Miércoles'
+        WHEN 'Thursday' THEN 'Jueves'
+        WHEN 'Friday' THEN 'Viernes'
+        WHEN 'Saturday' THEN 'Sábado'
+        WHEN 'Sunday' THEN 'Domingo'
+      END as day,
+      AVG(readiness_score) as avg_readiness,
+      AVG(sleep_score) as avg_sleep,
+      COUNT(*) as count
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE ${dateFilter}
+      AND readiness_score IS NOT NULL
+    GROUP BY day_name_en, day
+    ORDER BY 
+      CASE day_name_en
+        WHEN 'Monday' THEN 1
+        WHEN 'Tuesday' THEN 2
+        WHEN 'Wednesday' THEN 3
+        WHEN 'Thursday' THEN 4
+        WHEN 'Friday' THEN 5
+        WHEN 'Saturday' THEN 6
+        WHEN 'Sunday' THEN 7
+      END
+  `;
+  
+  const rows = await query(sql);
+  return rows;
+}
+
+// Query: HRV histórico últimos 7 días (para tendencias)
+export async function getHRVTrend(days: number = 7) {
+  const sql = `
+    SELECT 
+      calendar_date,
+      average_hrv_ms as hrv,
+      readiness_score
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE average_hrv_ms IS NOT NULL
+      AND calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+    ORDER BY calendar_date DESC
+  `;
+  
+  const rows = await query(sql);
+  return rows;
+}
+
+// Query: Scorecard últimos N días (para ver evolución)
+export async function getSleepScorecardHistory(days: number = 7) {
+  const sql = `
+    SELECT 
+      calendar_date,
+      ROUND(total_sleep_seconds / 3600.0, 2) as duration_hours,
+      ROUND(deep_sleep_seconds / 60.0, 0) as deep_sleep_minutes,
+      ROUND(rem_sleep_seconds / 60.0, 0) as rem_sleep_minutes,
+      average_hrv_ms as hrv,
+      sleep_score,
+      -- Checks individuales
+      CASE WHEN total_sleep_seconds / 3600.0 > 6.5 THEN 1 ELSE 0 END as duration_check,
+      CASE WHEN deep_sleep_seconds / 60.0 > 60 THEN 1 ELSE 0 END as deep_check,
+      CASE WHEN rem_sleep_seconds / 60.0 > 80 THEN 1 ELSE 0 END as rem_check,
+      CASE WHEN average_hrv_ms > 50 THEN 1 ELSE 0 END as hrv_check
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE sleep_score IS NOT NULL
+      AND calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+    ORDER BY calendar_date DESC
+  `;
+  
+  const rows = await query(sql);
+  return rows;
+}
+
+// ========================================================================
+// GOLD LAYER QUERIES (oura_dashboard)
+// ========================================================================
+// Las siguientes funciones consumen las vistas Gold optimizadas para el
+// dashboard con datos pre-agregados, calculados y listos para consumo.
+// ========================================================================
+
+const GOLD_DATASET = process.env.BIGQUERY_DATASET_GOLD || 'oura_dashboard';
+
+/**
+ * 1. Get KPIs for specific period (7, 14, 30, or 90 days)
+ * Uses Gold view: home_kpis
+ * Pre-calculados: current values, previous values, deltas absolutos y %
+ */
+export async function getHomeKPIs(periodDays: number = 7) {
+  const sql = `
+    SELECT 
+      period_days,
+      period_label_es,
+      days_count,
+      current_readiness,
+      current_sleep,
+      current_activity,
+      current_steps,
+      current_hrv,
+      current_sleep_hours,
+      previous_readiness,
+      previous_sleep,
+      previous_activity,
+      previous_steps,
+      readiness_delta,
+      readiness_delta_pct,
+      sleep_delta,
+      sleep_delta_pct,
+      activity_delta,
+      activity_delta_pct,
+      steps_delta,
+      steps_delta_pct,
+      last_updated
+    FROM \`${PROJECT_ID}.${GOLD_DATASET}.home_kpis\`
+    WHERE period_days = ${periodDays}
+  `;
+
+  const rows = await query(sql);
+  return rows[0] || null;
+}
+
+/**
+ * 2. Get HRV Alert data (current day)
+ * Uses Gold view: hrv_alert_current
+ * Incluye zona HRV, categoría readiness, recomendación automática
+ */
+export async function getHRVAlert() {
+  const sql = `
+    SELECT 
+      calendar_date,
+      hrv,
+      hrv_zone,
+      readiness_score,
+      sleep_score,
+      readiness_category,
+      recommendation,
+      zone_emoji,
+      last_updated
+    FROM \`${PROJECT_ID}.${GOLD_DATASET}.hrv_alert_current\`
+  `;
+
+  const rows = await query(sql);
+  return rows[0] || null;
+}
+
+/**
+ * 3. Get Sleep Scorecard for period
+ * Uses Gold view: sleep_scorecard_periods
+ * Promedios + checks (✅ o ❌) por cada métrica clave
+ */
+export async function getSleepScorecard(periodDays: number = 7) {
+  const sql = `
+    SELECT 
+      period_days,
+      nights_count,
+      avg_duration_hours,
+      avg_deep_minutes,
+      avg_rem_minutes,
+      avg_hrv,
+      avg_sleep_score,
+      avg_efficiency,
+      check_duration,
+      check_deep,
+      check_rem,
+      check_hrv,
+      total_score,
+      last_updated
+    FROM \`${PROJECT_ID}.${GOLD_DATASET}.sleep_scorecard_periods\`
+    WHERE period_days = ${periodDays}
+  `;
+
+  const rows = await query(sql);
+  return rows[0] || null;
+}
+
+/**
+ * 4. Get Recovery Factors (current day)
+ * Uses Gold view: recovery_factors_current
+ * Todos los contributors de readiness, identifica el más bajo
+ */
+export async function getRecoveryFactors() {
+  const sql = `
+    SELECT 
+      calendar_date,
+      readiness_score,
+      activity_balance,
+      body_temperature,
+      hrv_balance,
+      previous_day_activity,
+      previous_night,
+      recovery_index,
+      resting_heart_rate,
+      sleep_balance,
+      lowest_factor,
+      last_updated
+    FROM \`${PROJECT_ID}.${GOLD_DATASET}.recovery_factors_current\`
+  `;
+
+  const rows = await query(sql);
+  return rows[0] || null;
+}
+
+/**
+ * 5. Get Weekly Patterns
+ * Uses Gold view: weekly_patterns
+ * Promedios por día de la semana (4w o 12w)
+ */
+export async function getWeeklyPatterns(period: '4w' | '12w' = '4w') {
+  const sql = `
+    SELECT 
+      period,
+      day_of_week_en,
+      day_of_week_es,
+      avg_readiness,
+      avg_sleep,
+      avg_activity,
+      avg_steps,
+      sample_count,
+      day_order,
+      readiness_rank,
+      last_updated
+    FROM \`${PROJECT_ID}.${GOLD_DATASET}.weekly_patterns\`
+    WHERE period = '${period}'
+    ORDER BY day_order
+  `;
+
+  const rows = await query(sql);
+  return rows;
+}
+
+/**
+ * 6. Get Trends for period
+ * Uses Gold view: trends_periods
+ * Series temporal con rolling averages 7d
+ */
+export async function getTrends(periodDays: number = 30) {
+  const sql = `
+    SELECT 
+      calendar_date,
+      readiness_score,
+      sleep_score,
+      activity_score,
+      hrv,
+      sleep_hours,
+      activity_steps,
+      readiness_7d_avg,
+      sleep_7d_avg,
+      activity_7d_avg,
+      hrv_7d_avg,
+      readiness_category,
+      hrv_zone,
+      day_of_week_es,
+      is_weekend,
+      last_updated
+    FROM \`${PROJECT_ID}.${GOLD_DATASET}.trends_periods\`
+    WHERE period_days = ${periodDays}
+    ORDER BY calendar_date DESC
+  `;
+
+  const rows = await query(sql);
+  return rows;
+}
+
+/**
+ * 7. Get Stress Balance (current day)
+ * Uses Gold view: stress_balance_current
+ * Distribución de horas por estado de estrés + resiliencia
+ */
+export async function getStressBalance() {
+  const sql = `
+    SELECT 
+      calendar_date,
+      stress_day_summary,
+      recovery_hours,
+      stressed_hours,
+      neutral_hours,
+      resilience_level,
+      day_status,
+      resilience_status,
+      last_updated
+    FROM \`${PROJECT_ID}.${GOLD_DATASET}.stress_balance_current\`
+  `;
+
+  const rows = await query(sql);
+  return rows[0] || null;
+}
+
+/**
+ * 8. Get Activity Breakdown (current day)
+ * Uses Gold view: activity_breakdown_current
+ * Distribución de horas (resting/inactive/active) + alerta sedentarismo
+ */
+export async function getActivityBreakdown() {
+  const sql = `
+    SELECT 
+      calendar_date,
+      resting_hours,
+      inactive_hours,
+      active_hours,
+      resting_pct,
+      inactive_pct,
+      active_pct,
+      sedentary_hours,
+      sedentary_pct,
+      sedentary_alert,
+      activity_steps,
+      activity_total_calories,
+      last_updated
+    FROM \`${PROJECT_ID}.${GOLD_DATASET}.activity_breakdown_current\`
+  `;
+
+  const rows = await query(sql);
+  return rows[0] || null;
+}
+
+// ============================================================================
+// CUSTOM RANGE SUPPORT - Para períodos no pre-calculados en Gold Layer
+// ============================================================================
+
+/**
+ * Get home metrics for custom date range (when period is not 7/14/30/90)
+ * Query directo a Silver layer (daily_health_metrics)
+ */
+export async function getCustomHomeMetrics(startDate: string, endDate: string) {
+  const sql = `
+    WITH current_period AS (
+      SELECT 
+        AVG(readiness_score) as avg_readiness,
+        AVG(sleep_score) as avg_sleep,
+        AVG(activity_score) as avg_activity,
+        SUM(activity_steps) as total_steps,
+        AVG(hrv) as avg_hrv,
+        AVG(sleep_hours / 3600.0) as avg_sleep_hours,
+        COUNT(*) as days_count
+      FROM \`${PROJECT_ID}.oura_analytics.daily_health_metrics\`
+      WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
+    ),
+    previous_period AS (
+      SELECT 
+        AVG(readiness_score) as avg_readiness,
+        AVG(sleep_score) as avg_sleep,
+        AVG(activity_score) as avg_activity,
+        SUM(activity_steps) as total_steps
+      FROM \`${PROJECT_ID}.oura_analytics.daily_health_metrics\`
+      WHERE calendar_date >= DATE_SUB('${startDate}', INTERVAL DATE_DIFF('${endDate}', '${startDate}', DAY) + 1 DAY)
+        AND calendar_date < '${startDate}'
+    )
+    SELECT 
+      DATE_DIFF('${endDate}', '${startDate}', DAY) + 1 as period_days,
+      CONCAT('Últimos ', DATE_DIFF('${endDate}', '${startDate}', DAY) + 1, ' días') as period_label_es,
+      c.days_count,
+      
+      -- Período actual
+      ROUND(c.avg_readiness, 1) as current_readiness,
+      ROUND(c.avg_sleep, 1) as current_sleep,
+      ROUND(c.avg_activity, 1) as current_activity,
+      c.total_steps as current_steps,
+      ROUND(c.avg_hrv, 1) as current_hrv,
+      ROUND(c.avg_sleep_hours, 1) as current_sleep_hours,
+      
+      -- Período anterior
+      ROUND(p.avg_readiness, 1) as previous_readiness,
+      ROUND(p.avg_sleep, 1) as previous_sleep,
+      ROUND(p.avg_activity, 1) as previous_activity,
+      p.total_steps as previous_steps,
+      
+      -- Deltas
+      ROUND(c.avg_readiness - p.avg_readiness, 1) as readiness_delta,
+      ROUND(((c.avg_readiness - p.avg_readiness) / NULLIF(p.avg_readiness, 0)) * 100, 1) as readiness_delta_pct,
+      
+      ROUND(c.avg_sleep - p.avg_sleep, 1) as sleep_delta,
+      ROUND(((c.avg_sleep - p.avg_sleep) / NULLIF(p.avg_sleep, 0)) * 100, 1) as sleep_delta_pct,
+      
+      ROUND(c.avg_activity - p.avg_activity, 1) as activity_delta,
+      ROUND(((c.avg_activity - p.avg_activity) / NULLIF(p.avg_activity, 0)) * 100, 1) as activity_delta_pct,
+      
+      c.total_steps - p.total_steps as steps_delta,
+      ROUND(((c.total_steps - p.total_steps) / NULLIF(p.total_steps, 0)) * 100, 1) as steps_delta_pct,
+      
+      CURRENT_TIMESTAMP() as last_updated
+      
+    FROM current_period c
+    CROSS JOIN previous_period p
+  `;
+
+  const rows = await query(sql);
+  return rows[0] || null;
+}

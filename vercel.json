@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "env": {
+    "GOOGLE_CLOUD_PROJECT_ID": "last-240000",
+    "BIGQUERY_DATASET": "oura_biometrics",
+    "BIGQUERY_TABLE": "daily_biometrics_v2"
+  }
+}
