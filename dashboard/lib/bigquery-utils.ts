@@ -50,8 +50,13 @@ export function normalizeRow<T = any>(row: any): T {
  */
 export function normalizeRows<T = any>(rows: any[]): T[] {
   if (!Array.isArray(rows)) {
+    console.warn('[normalizeRows] Input is not an array:', typeof rows);
     return rows;
   }
   
-  return rows.map(normalizeRow);
+  console.log(`[normalizeRows] Normalizing ${rows.length} rows`);
+  const normalized = rows.map(normalizeRow);
+  console.log('[normalizeRows] Sample normalized row:', JSON.stringify(normalized[0]).substring(0, 200));
+  
+  return normalized;
 }
