@@ -102,28 +102,27 @@ export async function getWeekOverWeekStats(startDate?: string, endDate?: string)
 
 // Query: Datos de sueño por rango de fechas
 export async function getSleepData(startDate: string, endDate: string) {
-  // TEMP: Usar daily_aggregates hasta que ETL obtenga datos de sleep endpoint
   const sql = `
     SELECT 
       calendar_date,
       sleep_score,
-      sleep_total_sleep_duration as total_sleep_seconds,
-      ROUND(sleep_total_sleep_duration / 3600.0, 1) as total_hours,
-      ROUND(sleep_total_sleep_duration / 3600.0, 1) as total_sleep_hours,
-      sleep_total_sleep_duration as total_sleep_duration,
-      ROUND(sleep_deep_sleep_duration / 60.0, 0) as deep_sleep_min,
-      ROUND(sleep_deep_sleep_duration / 60.0, 0) as deep_sleep_minutes,
-      sleep_deep_sleep_duration as deep_sleep_duration,
-      ROUND(sleep_rem_sleep_duration / 60.0, 0) as rem_sleep_min,
-      ROUND(sleep_rem_sleep_duration / 60.0, 0) as rem_sleep_minutes,
-      sleep_rem_sleep_duration as rem_sleep_duration,
-      ROUND(sleep_light_sleep_duration / 60.0, 0) as light_sleep_min,
-      sleep_light_sleep_duration as light_sleep_duration,
-      ROUND(sleep_efficiency, 0) as efficiency,
-      ROUND(sleep_latency / 60.0, 0) as latency_min,
-      sleep_bedtime_start as bed_time_start,
-      sleep_bedtime_end as bed_time_end
-    FROM \`${PROJECT_ID}.${DATASET}.daily_aggregates\`
+      total_sleep_seconds,
+      ROUND(total_sleep_seconds / 3600.0, 1) as total_hours,
+      ROUND(total_sleep_seconds / 3600.0, 1) as total_sleep_hours,
+      total_sleep_seconds as total_sleep_duration,
+      ROUND(deep_sleep_seconds / 60.0, 0) as deep_sleep_min,
+      ROUND(deep_sleep_seconds / 60.0, 0) as deep_sleep_minutes,
+      deep_sleep_seconds as deep_sleep_duration,
+      ROUND(rem_sleep_seconds / 60.0, 0) as rem_sleep_min,
+      ROUND(rem_sleep_seconds / 60.0, 0) as rem_sleep_minutes,
+      rem_sleep_seconds as rem_sleep_duration,
+      ROUND(light_sleep_seconds / 60.0, 0) as light_sleep_min,
+      light_sleep_seconds as light_sleep_duration,
+      ROUND(sleep_efficiency_pct, 0) as efficiency,
+      ROUND(sleep_latency_seconds / 60.0, 0) as latency_min,
+      bed_time_start,
+      bed_time_end
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND sleep_score IS NOT NULL
     ORDER BY calendar_date ASC
@@ -140,19 +139,18 @@ export async function getSleepAverages(days: number = 30, startDate?: string, en
     ? `calendar_date BETWEEN '${startDate}' AND '${endDate}'`
     : `calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)`;
     
-  // TEMP: Usar daily_aggregates hasta que ETL obtenga datos de sleep endpoint
   const sql = `
     SELECT 
       AVG(sleep_score) as avg_score,
-      AVG(sleep_total_sleep_duration / 3600.0) as avg_hours,
-      AVG(sleep_deep_sleep_duration / 3600.0) as avg_deep_hours,
-      AVG(sleep_deep_sleep_duration / 60.0) as avg_deep,
-      AVG(sleep_rem_sleep_duration / 3600.0) as avg_rem_hours,
-      AVG(sleep_rem_sleep_duration / 60.0) as avg_rem,
-      AVG(sleep_efficiency) as avg_efficiency,
+      AVG(total_sleep_seconds / 3600.0) as avg_hours,
+      AVG(deep_sleep_seconds / 3600.0) as avg_deep_hours,
+      AVG(deep_sleep_seconds / 60.0) as avg_deep,
+      AVG(rem_sleep_seconds / 3600.0) as avg_rem_hours,
+      AVG(rem_sleep_seconds / 60.0) as avg_rem,
+      AVG(sleep_efficiency_pct) as avg_efficiency,
       COUNT(*) as total_nights,
-      SUM(CASE WHEN sleep_total_sleep_duration / 3600.0 >= 7 THEN 1 ELSE 0 END) as nights_over_7h
-    FROM \`${PROJECT_ID}.${DATASET}.daily_aggregates\`
+      SUM(CASE WHEN total_sleep_seconds / 3600.0 >= 7 THEN 1 ELSE 0 END) as nights_over_7h
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE ${dateFilter}
       AND sleep_score IS NOT NULL
   `;
@@ -289,16 +287,15 @@ export async function getCurrentVsHistorical() {
 
 // Query: Datos de recuperación por rango de fechas
 export async function getRecoveryData(startDate: string, endDate: string) {
-  // TEMP: Usar daily_aggregates hasta que ETL obtenga datos de sleep endpoint
   const sql = `
     SELECT 
       calendar_date,
       readiness_score,
-      sleep_average_heart_rate as average_heart_rate,
-      sleep_lowest_heart_rate as lowest_heart_rate,
-      readiness_temperature_deviation as temperature_deviation_celsius,
+      average_heart_rate,
+      lowest_heart_rate,
+      temperature_deviation_celsius,
       resilience_level
-    FROM \`${PROJECT_ID}.${DATASET}.daily_aggregates\`
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND readiness_score IS NOT NULL
     ORDER BY calendar_date ASC
@@ -315,17 +312,16 @@ export async function getRecoveryAverages(days: number = 30, startDate?: string,
     ? `calendar_date BETWEEN '${startDate}' AND '${endDate}'`
     : `calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)`;
     
-  // TEMP: Usar daily_aggregates hasta que ETL obtenga datos de sleep endpoint
   const sql = `
     SELECT 
       AVG(readiness_score) as avg_readiness,
-      AVG(sleep_average_heart_rate) as avg_hr_avg,
-      AVG(sleep_lowest_heart_rate) as avg_hr,
-      AVG(readiness_temperature_deviation) as avg_temp,
+      AVG(average_heart_rate) as avg_hr_avg,
+      AVG(lowest_heart_rate) as avg_hr,
+      AVG(temperature_deviation_celsius) as avg_temp,
       COUNT(*) as total_days,
       SUM(CASE WHEN readiness_score >= 85 THEN 1 ELSE 0 END) as excellent_days,
       SUM(CASE WHEN resilience_level = 'strong' THEN 1 ELSE 0 END) as strong_days
-    FROM \`${PROJECT_ID}.${DATASET}.daily_aggregates\`
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE ${dateFilter}
       AND readiness_score IS NOT NULL
   `;
