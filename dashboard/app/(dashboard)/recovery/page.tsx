@@ -9,15 +9,33 @@ import { ReadinessChart } from '@/components/charts/ReadinessChart';
 import { HRVChart } from '@/components/charts/HRVChart';
 import { Card } from '@/components/ui/card';
 import { Heart, Activity, Thermometer, Zap } from 'lucide-react';
+import { differenceInDays } from 'date-fns';
+import { parseDate } from '@/lib/date-utils';
 
-async function fetchRecoveryData(days: number = 7) {
-  const res = await fetch(`/api/recovery?type=recent&days=${days}`);
+async function fetchRecoveryData(days: number = 7, startDate?: Date, endDate?: Date) {
+  let url = `/api/recovery?type=recent&days=${days}`;
+  
+  if (startDate && endDate) {
+    const start = startDate.toISOString().split('T')[0];
+    const end = endDate.toISOString().split('T')[0];
+    url += `&start=${start}&end=${end}`;
+  }
+  
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch');
   return res.json();
 }
 
-async function fetchRecoveryAverages(days: number = 7) {
-  const res = await fetch(`/api/recovery?type=averages&days=${days}`);
+async function fetchRecoveryAverages(days: number = 7, startDate?: Date, endDate?: Date) {
+  let url = `/api/recovery?type=averages&days=${days}`;
+  
+  if (startDate && endDate) {
+    const start = startDate.toISOString().split('T')[0];
+    const end = endDate.toISOString().split('T')[0];
+    url += `&start=${start}&end=${end}`;
+  }
+  
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch');
   return res.json();
 }
@@ -36,16 +54,16 @@ export default function RecoveryPageBalanced() {
   });
   const [endDate, setEndDate] = useState(new Date());
 
-  const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const daysDiff = differenceInDays(endDate, startDate) + 1;
 
   const { data: recoveryData, isLoading: loadingData } = useQuery({
-    queryKey: ['recovery-data', daysDiff],
-    queryFn: () => fetchRecoveryData(daysDiff),
+    queryKey: ['recovery-data', startDate.toISOString(), endDate.toISOString(), daysDiff],
+    queryFn: () => fetchRecoveryData(daysDiff, startDate, endDate),
   });
 
   const { data: averagesData, isLoading: loadingAvg } = useQuery({
-    queryKey: ['recovery-averages', daysDiff],
-    queryFn: () => fetchRecoveryAverages(daysDiff),
+    queryKey: ['recovery-averages', startDate.toISOString(), endDate.toISOString(), daysDiff],
+    queryFn: () => fetchRecoveryAverages(daysDiff, startDate, endDate),
   });
 
   if (loadingData || loadingAvg) {
@@ -71,11 +89,14 @@ export default function RecoveryPageBalanced() {
   const avgHRAvg = averages.avg_hr_avg || 0;
   const avgTemp = averages.avg_temp || 0;
 
-  // Preparar datos para gráficas
-  const readinessChartData = recovery.slice(0, Math.min(recovery.length, 30)).reverse().map((day: any) => ({
-    label: new Date(day.calendar_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
-    value: day.readiness_score || 0,
-  }));
+  // Preparar datos para gráficas (hasta 90 días)
+  const readinessChartData = recovery.slice(0, Math.min(recovery.length, 90)).reverse().map((day: any) => {
+    const date = parseDate(day.calendar_date);
+    return {
+      label: date ? date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : 'N/A',
+      value: day.readiness_score || 0,
+    };
+  });
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
@@ -102,50 +123,60 @@ export default function RecoveryPageBalanced() {
       {/* KPIs principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="p-6 border-2">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Heart className="h-6 w-6 text-red-600" />
             <h3 className="text-lg font-semibold">Nivel de Recuperación</h3>
           </div>
           <p className="text-4xl font-bold mb-2">{avgReadiness.toFixed(0)}/100</p>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 mb-1">
             {avgReadiness >= 80 ? '✅ Listo para el día' : avgReadiness >= 60 ? '⚠️ Tómalo con calma' : '🛑 Descansa hoy'}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            Combina sueño, actividad, HRV y temperatura para medir qué tan recuperado está tu cuerpo.
           </p>
         </Card>
 
         <Card className="p-6 border-2">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Activity className="h-6 w-6 text-blue-600" />
             <h3 className="text-lg font-semibold">Ritmo Cardíaco en Reposo</h3>
           </div>
           <p className="text-4xl font-bold mb-2">{avgRestingHR.toFixed(0)} bpm</p>
-          <p className="text-sm text-gray-600">
-            ❤️ Latidos por minuto cuando descansas. Ideal: 40-60 bpm
+          <p className="text-sm text-gray-600 mb-1">
+            ❤️ Ideal: 40-60 bpm para adultos activos
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            Frecuencia cardíaca más baja durante el sueño. Valores más bajos indican mejor condición cardiovascular.
           </p>
         </Card>
 
         <Card className="p-6 border-2">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Zap className="h-6 w-6 text-yellow-600" />
             <h3 className="text-lg font-semibold">Variabilidad Cardíaca</h3>
           </div>
           <p className="text-4xl font-bold mb-2">{avgHRAvg.toFixed(1)} bpm</p>
-          <p className="text-sm text-gray-600">
-            💓 Promedio de tu ritmo cardíaco. Valores bajos = mejor recuperación
+          <p className="text-sm text-gray-600 mb-1">
+            💓 Promedio durante el período
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            Frecuencia cardíaca promedio en reposo. Disminuye con mejor forma física y recuperación adecuada.
           </p>
         </Card>
 
         <Card className="p-6 border-2">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Thermometer className="h-6 w-6 text-orange-600" />
-            <h3 className="text-lg font-semibold">Temperatura Corporal</h3>
+            <h3 className="text-lg font-semibold">Cambios en Temperatura Corporal</h3>
           </div>
-          <div className="flex items-baseline gap-2 mb-2">
-            <p className="text-4xl font-bold">
-              {avgTemp > 0 ? '+' : ''}{avgTemp.toFixed(2)}°C
-            </p>
-          </div>
-          <p className="text-sm text-gray-600">
-            🌡️ Desviación de tu temperatura normal. Valores normales: -0.5 a +0.5°C
+          <p className="text-4xl font-bold mb-2">
+            {avgTemp > 0 ? '+' : ''}{avgTemp.toFixed(2)}°C
+          </p>
+          <p className="text-sm text-gray-600 mb-1">
+            🌡️ Normal: -0.5 a +0.5°C
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            Diferencia vs tu temperatura basal. Aumentos pueden indicar enfermedad, estrés o menstruación.
           </p>
         </Card>
       </div>
@@ -155,13 +186,19 @@ export default function RecoveryPageBalanced() {
         {/* Gráfica 1: Nivel de recuperación */}
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-4">Nivel de Recuperación</h3>
-          {recovery.length > 0 && <ReadinessChart data={recovery.slice(0, Math.min(recovery.length, 30)).reverse()} />}
+          {recovery.length > 0 && <ReadinessChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
+          <p className="text-xs text-gray-500 mt-4 text-center">
+            Mide qué tan preparado está tu cuerpo para actividad física intensa
+          </p>
         </Card>
 
         {/* Gráfica 2: Frecuencia cardíaca en reposo */}
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-4">Frecuencia Cardíaca en Reposo</h3>
-          {recovery.length > 0 && <HRVChart data={recovery.slice(0, Math.min(recovery.length, 30)).reverse()} />}
+          {recovery.length > 0 && <HRVChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
+          <p className="text-xs text-gray-500 mt-4 text-center">
+            Menor frecuencia cardíaca en reposo = mejor condición cardiovascular
+          </p>
         </Card>
       </div>
 
@@ -174,6 +211,19 @@ export default function RecoveryPageBalanced() {
           title=""
           yAxisLabel="Puntos"
         />
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+          <p className="text-sm text-gray-700">
+            <strong>💡 Cómo interpretar:</strong> El nivel de recuperación combina calidad de sueño, 
+            variabilidad cardíaca (HRV), temperatura corporal y actividad reciente para calcular 
+            qué tan preparado está tu cuerpo para el estrés físico y mental del día.
+          </p>
+          <ul className="text-sm text-gray-600 mt-3 space-y-1 ml-4">
+            <li>• <strong>≥85:</strong> Óptimo - Puedes entrenar intenso</li>
+            <li>• <strong>70-84:</strong> Bueno - Entrenamiento moderado</li>
+            <li>• <strong>60-69:</strong> Aceptable - Actividad ligera</li>
+            <li>• <strong>&lt;60:</strong> Bajo - Prioriza descanso y recuperación</li>
+          </ul>
+        </div>
       </Card>
 
       {/* Recomendaciones contextuales */}
