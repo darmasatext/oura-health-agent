@@ -2,6 +2,7 @@
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
+import { parseDate } from '@/lib/date-utils';
 import { es } from 'date-fns/locale';
 
 interface CaloriesChartProps {
@@ -14,7 +15,7 @@ interface CaloriesChartProps {
 
 export function CaloriesChart({ data }: CaloriesChartProps) {
   const chartData = data.map(item => ({
-    date: format(new Date(item.calendar_date), 'dd MMM', { locale: es }),
+    date: format(parseDate(item.calendar_date) || new Date(), 'dd MMM', { locale: es }),
     activas: Math.round(item.active_calories),
     totales: Math.round(item.total_calories),
   }));

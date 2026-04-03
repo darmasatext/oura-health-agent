@@ -2,6 +2,7 @@
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
+import { parseDate } from '@/lib/date-utils';
 import { es } from 'date-fns/locale';
 
 interface SleepChartProps {
@@ -14,7 +15,7 @@ interface SleepChartProps {
 
 export function SleepChart({ data }: SleepChartProps) {
   const chartData = data.map(item => ({
-    date: format(new Date(item.calendar_date), 'dd MMM', { locale: es }),
+    date: format(parseDate(item.calendar_date) || new Date(), 'dd MMM', { locale: es }),
     score: item.sleep_score,
     hours: item.total_hours,
   }));

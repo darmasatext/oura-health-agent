@@ -1,5 +1,6 @@
 'use client';
 
+import { parseDate } from '@/lib/date-utils';
 import {
   ScatterChart,
   Scatter,
@@ -34,7 +35,7 @@ export function CorrelationChart({ data, xKey, yKey, xLabel, yLabel }: Correlati
         <div className="bg-white p-3 border rounded shadow-lg">
           {data.calendar_date && (
             <p className="text-sm font-semibold mb-1">
-              {new Date(data.calendar_date).toLocaleDateString('es-MX', {
+              {(parseDate(data.calendar_date) || new Date()).toLocaleDateString('es-MX', {
                 day: 'numeric',
                 month: 'short',
                 year: 'numeric'

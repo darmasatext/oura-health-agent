@@ -2,6 +2,7 @@
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
+import { parseDate } from '@/lib/date-utils';
 import { es } from 'date-fns/locale';
 
 interface HRVChartProps {
@@ -13,7 +14,7 @@ interface HRVChartProps {
 
 export function HRVChart({ data }: HRVChartProps) {
   const chartData = data.map(item => ({
-    date: format(new Date(item.calendar_date), 'dd MMM', { locale: es }),
+    date: format(parseDate(item.calendar_date) || new Date(), 'dd MMM', { locale: es }),
     hr: item.average_heart_rate,
   }));
 
@@ -21,9 +22,20 @@ export function HRVChart({ data }: HRVChartProps) {
     <ResponsiveContainer width="100%" height={300}>
       <AreaChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis label={{ value: 'FC (bpm)', angle: -90, position: 'insideLeft' }} />
-        <Tooltip />
+        <XAxis dataKey="date" tick={{ fontSize: 14 }} />
+        <YAxis 
+          tick={{ fontSize: 14 }}
+          label={{ 
+            value: 'Latidos por minuto', 
+            angle: -90, 
+            position: 'center',
+            style: { fontSize: 14, fontWeight: 600, textAnchor: 'middle' }
+          }} 
+        />
+        <Tooltip 
+          formatter={(value) => [`${value} bpm`, 'Frecuencia Cardíaca']}
+          contentStyle={{ fontSize: 14 }}
+        />
         <Area type="monotone" dataKey="hr" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.3} name="Frecuencia Cardíaca" />
       </AreaChart>
     </ResponsiveContainer>

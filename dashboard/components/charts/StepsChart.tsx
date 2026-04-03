@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, LabelList, Cell } from 'recharts';
 import { format } from 'date-fns';
+import { parseDate } from '@/lib/date-utils';
 import { es } from 'date-fns/locale';
 
 interface StepsChartProps {
@@ -14,7 +15,7 @@ interface StepsChartProps {
 
 export function StepsChart({ data, goal = 10000 }: StepsChartProps) {
   const chartData = data.map(item => ({
-    date: format(new Date(item.calendar_date), 'dd MMM', { locale: es }),
+    date: format(parseDate(item.calendar_date) || new Date(), 'dd MMM', { locale: es }),
     steps: item.steps,
     meetsGoal: item.steps >= goal,
   }));

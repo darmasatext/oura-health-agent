@@ -32,11 +32,10 @@ export function SimplifiedBarChart({
 
   return (
     <div 
-      className="bg-white p-6 rounded-xl border-2 border-gray-300"
       role="region"
       aria-label={`${title}: ${chartDescription}`}
     >
-      <h3 className="text-2xl font-bold mb-4">{title}</h3>
+      {title && <h3 className="text-2xl font-bold mb-4">{title}</h3>}
       
       <ResponsiveContainer width="100%" height={300}>
         <BarChart 
@@ -86,44 +85,6 @@ export function SimplifiedBarChart({
         </BarChart>
       </ResponsiveContainer>
       
-      {/* Leyenda con texto grande y colores claros */}
-      <div className="mt-6 flex flex-wrap gap-6 text-lg justify-center">
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-8 h-8 rounded border-2"
-            style={{ 
-              backgroundColor: ACCESSIBLE_COLORS.good.border,
-              borderColor: ACCESSIBLE_COLORS.good.border 
-            }}
-            aria-hidden="true"
-          />
-          <span className="font-semibold">Rango Normal</span>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-8 h-8 rounded border-2"
-            style={{ 
-              backgroundColor: ACCESSIBLE_COLORS.warning.border,
-              borderColor: ACCESSIBLE_COLORS.warning.border 
-            }}
-            aria-hidden="true"
-          />
-          <span className="font-semibold">Revisar</span>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-8 h-8 rounded border-2"
-            style={{ 
-              backgroundColor: ACCESSIBLE_COLORS.attention.border,
-              borderColor: ACCESSIBLE_COLORS.attention.border 
-            }}
-            aria-hidden="true"
-          />
-          <span className="font-semibold">Atención</span>
-        </div>
-      </div>
     </div>
   );
 }
