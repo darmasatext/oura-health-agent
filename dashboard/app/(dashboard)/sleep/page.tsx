@@ -7,17 +7,36 @@ import { MetricCardEnhanced } from '@/components/dashboard/MetricCardEnhanced';
 import { SleepDurationChart } from '@/components/charts/SleepDurationChart';
 import { SimplifiedBarChart } from '@/components/charts/SimplifiedBarChart';
 import { SleepPhasesChart } from '@/components/charts/SleepPhasesChart';
+import { SleepBenchmark } from '@/components/sleep/SleepBenchmark';
+import { parseDate } from '@/lib/date-utils';
 import { Card } from '@/components/ui/card';
 import { Moon, Heart, Clock, Bed, Brain } from 'lucide-react';
 
-async function fetchSleepData(days: number = 7) {
-  const res = await fetch(`/api/sleep?type=recent&days=${days}`);
+async function fetchSleepData(days: number = 7, startDate?: Date, endDate?: Date) {
+  let url = `/api/sleep?type=recent&days=${days}`;
+  
+  // Agregar fechas específicas si están disponibles
+  if (startDate && endDate) {
+    const start = startDate.toISOString().split('T')[0];
+    const end = endDate.toISOString().split('T')[0];
+    url += `&start=${start}&end=${end}`;
+  }
+  
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch');
   return res.json();
 }
 
-async function fetchSleepAverages(days: number = 7) {
-  const res = await fetch(`/api/sleep?type=averages&days=${days}`);
+async function fetchSleepAverages(days: number = 7, startDate?: Date, endDate?: Date) {
+  let url = `/api/sleep?type=averages&days=${days}`;
+  
+  if (startDate && endDate) {
+    const start = startDate.toISOString().split('T')[0];
+    const end = endDate.toISOString().split('T')[0];
+    url += `&start=${start}&end=${end}`;
+  }
+  
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch');
   return res.json();
 }
@@ -36,16 +55,16 @@ export default function SleepPageBalanced() {
   });
   const [endDate, setEndDate] = useState(new Date());
 
-  const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
   const { data: sleepData, isLoading: loadingData } = useQuery({
-    queryKey: ['sleep-data', daysDiff],
-    queryFn: () => fetchSleepData(daysDiff),
+    queryKey: ['sleep-data', startDate.toISOString(), endDate.toISOString(), daysDiff],
+    queryFn: () => fetchSleepData(daysDiff, startDate, endDate),
   });
 
   const { data: averages, isLoading: loadingAvg } = useQuery({
-    queryKey: ['sleep-averages', daysDiff],
-    queryFn: () => fetchSleepAverages(daysDiff),
+    queryKey: ['sleep-averages', startDate.toISOString(), endDate.toISOString(), daysDiff],
+    queryFn: () => fetchSleepAverages(daysDiff, startDate, endDate),
   });
 
   if (loadingData || loadingAvg) {
@@ -71,11 +90,14 @@ export default function SleepPageBalanced() {
   const avgDeepHours = avg.avg_deep_hours || 0;
   const avgRemHours = avg.avg_rem_hours || 0;
 
-  // Preparar datos para gráficas
-  const sleepScoreData = sleep.slice(0, Math.min(sleep.length, 30)).reverse().map((day: any) => ({
-    label: new Date(day.calendar_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
-    value: day.sleep_score || 0,
-  }));
+  // Preparar datos para gráficas (hasta 90 días)
+  const sleepScoreData = sleep.slice(0, Math.min(sleep.length, 90)).reverse().map((day: any) => {
+    const date = parseDate(day.calendar_date);
+    return {
+      label: date ? date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : 'N/A',
+      value: day.sleep_score || 0,
+    };
+  });
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
@@ -157,12 +179,24 @@ export default function SleepPageBalanced() {
             title=""
             yAxisLabel="Puntos"
           />
+          <p className="text-sm text-gray-600 mt-4 text-center">
+            <span style={{color: '#2E7D32', fontWeight: 'bold'}}>● Verde</span>: Excelente (≥80) · <span style={{color: '#eab308', fontWeight: 'bold'}}>● Amarillo</span>: Revisar (60-79) · <span style={{color: '#C62828', fontWeight: 'bold'}}>● Rojo</span>: Atención (&lt;60)
+          </p>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            Puntuación basada en tiempo total, eficiencia, restauración y latencia de sueño
+          </p>
         </Card>
 
         {/* Gráfica 2: Duración (horas por noche) */}
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-4">Horas de Sueño por Noche</h3>
-          <SleepDurationChart data={sleep.slice(0, Math.min(sleep.length, 30)).reverse()} />
+          <SleepDurationChart data={sleep.slice(0, Math.min(sleep.length, 90)).reverse()} />
+          <p className="text-sm text-gray-600 mt-4 text-center">
+            🟢 Verde: Óptimo (7-9h) · 🟡 Amarillo: Aceptable (6-7h) · 🔴 Rojo: Insuficiente (&lt;6h)
+          </p>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            Las líneas punteadas muestran el rango recomendado de sueño para adultos. Cada barra representa tus horas de sueño en esa noche.
+          </p>
         </Card>
       </div>
 
@@ -170,7 +204,7 @@ export default function SleepPageBalanced() {
       {sleep.length > 0 && sleep[0].deep_sleep_duration !== undefined && (
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-4">Distribución de Fases de Sueño</h3>
-          <SleepPhasesChart data={sleep.slice(0, Math.min(sleep.length, 14)).reverse()} />
+          <SleepPhasesChart data={sleep.slice(0, Math.min(sleep.length, 90)).reverse()} />
         </Card>
       )}
 
@@ -186,6 +220,9 @@ export default function SleepPageBalanced() {
           </ul>
         </Card>
       )}
+
+      {/* Benchmark personalizado */}
+      <SleepBenchmark />
     </div>
   );
 }

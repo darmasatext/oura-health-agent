@@ -3,6 +3,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { parseDate } from '@/lib/date-utils';
 
 interface SleepPhasesChartProps {
   data: Array<{
@@ -14,12 +15,15 @@ interface SleepPhasesChartProps {
 }
 
 export function SleepPhasesChart({ data }: SleepPhasesChartProps) {
-  const chartData = data.map(item => ({
-    date: format(new Date(item.calendar_date), 'dd MMM', { locale: es }),
-    profundo: item.deep_sleep_min,
-    rem: item.rem_sleep_min,
-    ligero: item.light_sleep_min,
-  }));
+  const chartData = data.map(item => {
+    const date = parseDate(item.calendar_date);
+    return {
+      date: date ? format(date, 'dd MMM', { locale: es }) : 'N/A',
+      profundo: item.deep_sleep_min,
+      rem: item.rem_sleep_min,
+      ligero: item.light_sleep_min,
+    };
+  });
 
   return (
     <ResponsiveContainer width="100%" height={300}>
