@@ -12,35 +12,36 @@ import { Moon, Heart, Activity, Lightbulb, TrendingUp } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { es, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/lib/language-context';
+import { useUser } from '@/lib/user-context';
 
 // Calcula el número exacto de días entre dos fechas
 function calculateDays(startDate: Date, endDate: Date): number {
   return differenceInDays(endDate, startDate) + 1;
 }
 
-async function fetchKPIs(startDate: Date, endDate: Date) {
+async function fetchKPIs(startDate: Date, endDate: Date, userSlug: string) {
   const timestamp = Date.now();
   const days = calculateDays(startDate, endDate);
   const startStr = format(startDate, 'yyyy-MM-dd');
   const endStr = format(endDate, 'yyyy-MM-dd');
   
   // Debug
-  console.log('fetchKPIs:', { startDate: startStr, endDate: endStr, days });
+  console.log('fetchKPIs:', { startDate: startStr, endDate: endStr, days, user: userSlug });
   
-  // Enviar fechas específicas al API
-  const res = await fetch(`/api/metrics?type=kpis&period=${days}&start=${startStr}&end=${endStr}&_t=${timestamp}`);
+  // Enviar fechas específicas al API (incluir user aunque Gold Layer no lo soporte aún)
+  const res = await fetch(`/api/metrics?type=kpis&period=${days}&start=${startStr}&end=${endStr}&user=${userSlug}&_t=${timestamp}`);
   if (!res.ok) throw new Error('Failed to fetch KPIs');
   return res.json();
 }
 
-async function fetchHealthInsights(startDate: Date, endDate: Date) {
+async function fetchHealthInsights(startDate: Date, endDate: Date, userSlug: string) {
   const timestamp = Date.now();
   const days = calculateDays(startDate, endDate);
   const startStr = format(startDate, 'yyyy-MM-dd');
   const endStr = format(endDate, 'yyyy-MM-dd');
   
-  // Enviar fechas específicas al API
-  const res = await fetch(`/api/health-insights?type=all&days=${days}&start=${startStr}&end=${endStr}&_t=${timestamp}`);
+  // Enviar fechas específicas al API (incluir user aunque Gold Layer no lo soporte aún)
+  const res = await fetch(`/api/health-insights?type=all&days=${days}&start=${startStr}&end=${endStr}&user=${userSlug}&_t=${timestamp}`);
   if (!res.ok) throw new Error('Failed to fetch health insights');
   return res.json();
 }
@@ -125,6 +126,7 @@ function generateWeeklyInsight(kpis: any, startDate: Date, endDate: Date, t: (ke
 
 export default function DashboardHome() {
   const { t, language } = useLanguage();
+  const { currentUser } = useUser();
   const locale = language === 'es' ? es : enUS;
   
   const getInitialDates = () => {
@@ -150,18 +152,18 @@ export default function DashboardHome() {
   // Calcular días exactos (sin redondeo)
   const days = calculateDays(startDate, endDate);
 
-  // Query KPIs desde Gold layer o custom range
+  // Query KPIs desde Gold layer o custom range (con user para evitar cache cruzado)
   const { data, isLoading, error } = useQuery({
-    queryKey: ['dashboard-kpis-gold', format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'), days],
-    queryFn: () => fetchKPIs(startDate, endDate),
+    queryKey: ['dashboard-kpis-gold', currentUser.slug, format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'), days],
+    queryFn: () => fetchKPIs(startDate, endDate, currentUser.slug),
     staleTime: 2 * 60 * 1000, // Datos válidos 2 minutos
     gcTime: 10 * 60 * 1000, // Mantener en caché 10 minutos
   });
 
-  // Query Health Insights desde Gold layer
+  // Query Health Insights desde Gold layer (con user para evitar cache cruzado)
   const { data: insightsData, isLoading: insightsLoading } = useQuery({
-    queryKey: ['health-insights-gold', format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'), days],
-    queryFn: () => fetchHealthInsights(startDate, endDate),
+    queryKey: ['health-insights-gold', currentUser.slug, format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'), days],
+    queryFn: () => fetchHealthInsights(startDate, endDate, currentUser.slug),
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
 import { useLanguage } from '@/lib/language-context';
+import UserSelector from '@/components/dashboard/UserSelector';
 
 // Navegación balanceada - Array CONSTANTE fuera del componente para evitar hydration issues
 const NAV_LINKS = [
@@ -26,8 +27,13 @@ export function Navigation() {
     <nav className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 shadow-sm transition-colors" role="navigation" aria-label="Navegación principal">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between py-4 gap-4">
-          {/* Logo, versión y theme toggle */}
+          {/* Logo, versión, user selector y theme toggle */}
           <div className="flex items-center gap-3 justify-center md:justify-start">
+            {/* User Selector - primero en mobile, antes del logo */}
+            <div className="md:hidden">
+              <UserSelector />
+            </div>
+            
             <Link 
               href="/" 
               className="flex items-center gap-3 text-2xl font-bold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -44,6 +50,12 @@ export function Navigation() {
             <span className="text-sm text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
               v5.10
             </span>
+            
+            {/* User Selector - desktop */}
+            <div className="hidden md:block">
+              <UserSelector />
+            </div>
+            
             <ThemeToggle />
           </div>
 

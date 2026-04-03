@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getWeekOverWeekComparison, getCurrentVsHistorical } from '@/lib/queries';
+import { getWeekOverWeekComparison, getCurrentVsHistorical } from '@/lib/queries-multiuser';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'wow';
+    const userSlug = searchParams.get('user') || 'fer';
 
     if (type === 'wow') {
-      const data = await getWeekOverWeekComparison();
+      const data = await getWeekOverWeekComparison(userSlug);
       return NextResponse.json(
         { success: true, data },
         { 
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     }
 
     if (type === 'historical') {
-      const data = await getCurrentVsHistorical();
+      const data = await getCurrentVsHistorical(userSlug);
       return NextResponse.json(
         { success: true, data },
         { 

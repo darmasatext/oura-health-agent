@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSleepData, getSleepAverages } from '@/lib/queries';
+import { getSleepData, getSleepAverages } from '@/lib/queries-multiuser';
 import { subDays, format } from 'date-fns';
 
 export async function GET(request: Request) {
@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     const days = parseInt(searchParams.get('days') || '30');
     const start = searchParams.get('start');
     const end = searchParams.get('end');
+    const userSlug = searchParams.get('user') || 'fer'; // Default: Fer
 
     if (type === 'recent') {
       // Usar fechas del parámetro si están disponibles, sino calcular desde hoy
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
         startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
       }
       
-      const data = await getSleepData(startDate, endDate);
+      const data = await getSleepData(startDate, endDate, userSlug);
       return NextResponse.json(
         { success: true, data },
         { 
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
         startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
       }
       
-      const data = await getSleepAverages(days, startDate, endDate);
+      const data = await getSleepAverages(days, startDate, endDate, userSlug);
       return NextResponse.json(
         { success: true, data },
         { 

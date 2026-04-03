@@ -12,8 +12,9 @@ import { Activity, Footprints, Flame, Target } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/lib/language-context';
+import { useUser } from '@/lib/user-context';
 
-async function fetchActivityData(days: number = 7, startDate?: Date, endDate?: Date) {
+async function fetchActivityData(days: number = 7, startDate?: Date, endDate?: Date, userSlug?: string) {
   const timestamp = Date.now();
   let url = `/api/activity?type=recent&days=${days}&_t=${timestamp}`;
   
@@ -30,6 +31,7 @@ async function fetchActivityData(days: number = 7, startDate?: Date, endDate?: D
 
 export default function ActivityPageAccessible() {
   const { t, language } = useLanguage();
+  const { currentUser } = useUser();
   const locale = language === 'es' ? 'es-MX' : 'en-US';
   
   const getInitialDates = () => {
@@ -54,8 +56,8 @@ export default function ActivityPageAccessible() {
   const daysDiff = differenceInDays(endDate, startDate) + 1;
 
   const { data: activityData, isLoading } = useQuery({
-    queryKey: ['activity-data', startDate.toISOString(), endDate.toISOString(), daysDiff],
-    queryFn: () => fetchActivityData(daysDiff, startDate, endDate),
+    queryKey: ['activity-data', currentUser.slug, startDate.toISOString(), endDate.toISOString(), daysDiff],
+    queryFn: () => fetchActivityData(daysDiff, startDate, endDate, currentUser.slug),
   });
 
   if (isLoading) {

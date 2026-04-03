@@ -1,7 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -16,6 +16,20 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
       },
     },
   }));
+
+  // Limpiar TODO el cache al montar (después de cambio de usuario)
+  useEffect(() => {
+    // Si hay un query param _= (timestamp de reload forzado), limpiar cache
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('_')) {
+      console.log('🧹 Limpiando cache de React Query por cambio de usuario');
+      queryClient.clear();
+      
+      // Limpiar el query param de la URL sin recargar
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -2,13 +2,12 @@ import { NextResponse } from 'next/server';
 import { 
   getLast7Days, 
   getWeekOverWeekStats,
-  getHomeKPIs,
-  getCustomHomeMetrics,
   getHRVAlert,
   getSleepScorecard,
   getRecoveryFactors,
   getStressBalance,
   getActivityBreakdown,
+  getCustomHomeMetricsUserSpecific,
 } from '@/lib/queries';
 import { format, subDays } from 'date-fns';
 
@@ -19,32 +18,51 @@ export async function GET(request: Request) {
     const start = searchParams.get('start');
     const end = searchParams.get('end');
     const period = parseInt(searchParams.get('period') || '7');
+    const userSlug = searchParams.get('user') || 'fer'; // Soporte multi-user
 
     // ===== GOLD LAYER ENDPOINTS =====
     
     if (type === 'kpis') {
       let data;
       
-      // Si el período es uno de los pre-calculados en Gold Layer, usarlo (más rápido)
-      if (period === 7 || period === 14 || period === 30 || period === 90) {
-        data = await getHomeKPIs(period);
-      } else {
-        // Para otros períodos (1, 2, 3, 10, 20, etc.), query directo a Silver Layer
-        // Usar fechas del parámetro si están disponibles, sino calcular desde hoy
+      // Si hay parámetro user, usar queries user-specific (bypassing Gold Layer)
+      const useUserSpecific = searchParams.has('user');
+      
+      if (useUserSpecific) {
+        // Multi-user mode: query directo a daily_biometrics_{slug}
         let endDate: string;
         let startDate: string;
         
         if (start && end) {
-          // Usuario seleccionó fechas específicas
           startDate = start;
           endDate = end;
         } else {
-          // Calcular desde hoy (backward compatibility)
           endDate = format(new Date(), 'yyyy-MM-dd');
           startDate = format(subDays(new Date(), period - 1), 'yyyy-MM-dd');
         }
         
-        data = await getCustomHomeMetrics(startDate, endDate);
+        console.log('[API /metrics] Multi-user query:', { userSlug, startDate, endDate });
+        data = await getCustomHomeMetricsUserSpecific(startDate, endDate, userSlug);
+      } else {
+        // Single-user mode: usar Gold Layer (backward compatibility)
+        const { getHomeKPIs, getCustomHomeMetrics } = await import('@/lib/queries');
+        
+        if (period === 7 || period === 14 || period === 30 || period === 90) {
+          data = await getHomeKPIs(period);
+        } else {
+          let endDate: string;
+          let startDate: string;
+          
+          if (start && end) {
+            startDate = start;
+            endDate = end;
+          } else {
+            endDate = format(new Date(), 'yyyy-MM-dd');
+            startDate = format(subDays(new Date(), period - 1), 'yyyy-MM-dd');
+          }
+          
+          data = await getCustomHomeMetrics(startDate, endDate);
+        }
       }
       
       return NextResponse.json(

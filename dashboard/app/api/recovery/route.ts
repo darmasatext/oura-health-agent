@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getRecoveryData, getRecoveryAverages } from '@/lib/queries';
+import { getRecoveryData, getRecoveryAverages } from '@/lib/queries-multiuser';
 import { subDays, format } from 'date-fns';
 
 export async function GET(request: Request) {
@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     const days = parseInt(searchParams.get('days') || '30');
     const start = searchParams.get('start');
     const end = searchParams.get('end');
+    const userSlug = searchParams.get('user') || 'fer';
 
     if (type === 'recent') {
       let endDate: string;
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
         startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
       }
       
-      const data = await getRecoveryData(startDate, endDate);
+      const data = await getRecoveryData(startDate, endDate, userSlug);
       return NextResponse.json(
         { success: true, data },
         { 
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
         startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
       }
       
-      const data = await getRecoveryAverages(days, startDate, endDate);
+      const data = await getRecoveryAverages(days, startDate, endDate, userSlug);
       return NextResponse.json(
         { success: true, data },
         { 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getActivityData, getActivityTotals, getMostActiveDay } from '@/lib/queries';
+import { getActivityData, getActivityTotals, getMostActiveDay } from '@/lib/queries-multiuser';
 import { subDays, format } from 'date-fns';
 
 export async function GET(request: Request) {
@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     const days = parseInt(searchParams.get('days') || '7');
     const start = searchParams.get('start');
     const end = searchParams.get('end');
+    const userSlug = searchParams.get('user') || 'fer';
 
     if (type === 'recent') {
       // Usar fechas del parámetro si están disponibles, sino calcular desde hoy
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
         startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
       }
       
-      const data = await getActivityData(startDate, endDate);
+      const data = await getActivityData(startDate, endDate, userSlug);
       
       // Parse números correctamente
       const parsedData = data.map(row => ({
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
     }
 
     if (type === 'totals') {
-      const data = await getActivityTotals(days);
+      const data = await getActivityTotals(days, start || undefined, end || undefined, userSlug);
       
       // Parse números correctamente
       const parsedData = {
@@ -71,7 +72,7 @@ export async function GET(request: Request) {
     }
 
     if (type === 'goals') {
-      const mostActiveDay = await getMostActiveDay(days);
+      const mostActiveDay = await getMostActiveDay(days, start || undefined, end || undefined, userSlug);
       
       // Parse números correctamente
       const parsedData = mostActiveDay ? {

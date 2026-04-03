@@ -36,6 +36,7 @@ export const translations = {
     'common.vs_previous_week': 'vs semana anterior',
     'common.current': 'Actual',
     'common.previous': 'Anterior',
+    'common.coming_soon': 'Próximamente',
     
     // Date Selector
     'date.last_7_days': 'Últimos 7 días',
@@ -466,6 +467,7 @@ export const translations = {
     'common.vs_previous_week': 'vs previous week',
     'common.current': 'Current',
     'common.previous': 'Previous',
+    'common.coming_soon': 'Coming Soon',
     
     // Date Selector
     'date.last_7_days': 'Last 7 days',

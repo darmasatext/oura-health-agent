@@ -3,7 +3,11 @@ import { query } from '@/lib/bigquery-wrapper';
 
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'last-240000';
 const DATASET = process.env.BIGQUERY_DATASET || 'oura_biometrics';
-const TABLE = process.env.BIGQUERY_TABLE || 'daily_biometrics_gold';
+
+// Helper para obtener nombre de tabla por usuario
+function getTableForUser(userSlug: string): string {
+  return `daily_biometrics_${userSlug}`;
+}
 
 // Mapa de días en inglés a español
 const DAY_NAMES_ES: Record<string, string> = {
@@ -20,16 +24,17 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'weekday';
+    const userSlug = searchParams.get('user') || 'fer';
 
     switch (type) {
       case 'weekday':
-        return await getWeekdayAnalysis();
+        return await getWeekdayAnalysis(userSlug);
       case 'correlations':
-        return await getCorrelations();
+        return await getCorrelations(userSlug);
       case 'streaks':
-        return await getStreaks();
+        return await getStreaks(userSlug);
       case 'superdays':
-        return await getSuperDays();
+        return await getSuperDays(userSlug);
       default:
         return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 });
     }
@@ -40,7 +45,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Análisis por día de la semana
-async function getWeekdayAnalysis() {
+async function getWeekdayAnalysis(userSlug: string) {
   const sql = `
     SELECT
       FORMAT_DATE('%A', calendar_date) as day_of_week,
@@ -48,7 +53,7 @@ async function getWeekdayAnalysis() {
       AVG(readiness_score) as avg_readiness_score,
       AVG(activity_score) as avg_activity_score,
       COUNT(*) as total_days
-    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    FROM \`${PROJECT_ID}.${DATASET}.${getTableForUser(userSlug)}\`
     WHERE sleep_score IS NOT NULL
       AND readiness_score IS NOT NULL
       AND activity_score IS NOT NULL
@@ -77,7 +82,7 @@ async function getWeekdayAnalysis() {
 }
 
 // Correlaciones entre métricas
-async function getCorrelations() {
+async function getCorrelations(userSlug: string) {
   const sql = `
     SELECT
       calendar_date,
@@ -87,7 +92,7 @@ async function getCorrelations() {
       total_sleep_seconds / 3600.0 as sleep_hours,
       lowest_heart_rate as resting_heart_rate,
       average_heart_rate
-    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    FROM \`${PROJECT_ID}.${DATASET}.${getTableForUser(userSlug)}\`
     WHERE sleep_score IS NOT NULL
       AND readiness_score IS NOT NULL
       AND activity_score IS NOT NULL
@@ -186,14 +191,14 @@ function calculateCorrelations(data: any[]) {
 }
 
 // Detección de rachas
-async function getStreaks() {
+async function getStreaks(userSlug: string) {
   const sql = `
     SELECT
       calendar_date,
       sleep_score,
       readiness_score,
       activity_score
-    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    FROM \`${PROJECT_ID}.${DATASET}.${getTableForUser(userSlug)}\`
     WHERE sleep_score IS NOT NULL
       AND readiness_score IS NOT NULL
       AND activity_score IS NOT NULL
@@ -288,14 +293,14 @@ function calculateStreak(data: any[], metric: string, threshold: number) {
 }
 
 // Super Days (días perfectos) - Thresholds ajustados a 80
-async function getSuperDays() {
+async function getSuperDays(userSlug: string) {
   const sql = `
     SELECT
       calendar_date,
       sleep_score,
       readiness_score,
       activity_score
-    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    FROM \`${PROJECT_ID}.${DATASET}.${getTableForUser(userSlug)}\`
     WHERE sleep_score >= 80
       AND readiness_score >= 80
       AND activity_score >= 75

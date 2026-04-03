@@ -15,7 +15,8 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 PROJECT_ID = os.getenv('GOOGLE_CLOUD_PROJECT', 'last-240000')
 DATASET_ID = "oura_biometrics"
-TABLE_ID = "daily_biometrics_v2"
+TABLE_ID = os.getenv('TABLE_ID', 'daily_biometrics_v2')  # Permite override para multi-usuario
+USER_NAME = os.getenv('USER_NAME', 'Usuario')  # Para mensajes Telegram personalizados
 LOOKBACK_DAYS = int(os.getenv('LOOKBACK_DAYS', '7'))
 
 def send_telegram(msg):
@@ -539,7 +540,8 @@ def main():
         
         latest = rows[-1]
         msg = (
-            f"✅ *Oura ETL v2 (MERGE)*\n"
+            f"✅ *Oura ETL v2 - {USER_NAME}*\n"
+            f"📊 Tabla: `{TABLE_ID}`\n"
             f"📅 `{latest['calendar_date']}`\n"
             f"😴 Sleep: {latest.get('sleep_score', 'N/A')} | "
             f"⚡ Ready: {latest.get('readiness_score', 'N/A')}\n"

@@ -853,3 +853,147 @@ export async function getCustomHomeMetrics(startDate: string, endDate: string) {
   return rows[0] || null;
 }
 // Force redeploy Thu Apr  2 11:16:17 PM CST 2026
+
+// ============================================================
+// MULTI-USER: Queries user-specific (bypassing Gold Layer)
+// ============================================================
+
+export async function getCustomHomeMetricsUserSpecific(startDate: string, endDate: string, userSlug: string) {
+  const tableName = `daily_biometrics_${userSlug}`;
+  
+  const sql = `
+    WITH current_period AS (
+      SELECT 
+        AVG(readiness_score) as avg_readiness,
+        AVG(sleep_score) as avg_sleep,
+        AVG(activity_score) as avg_activity,
+        SUM(steps) as total_steps,
+        AVG(average_hrv_ms) as avg_hrv,
+        AVG(total_sleep_seconds / 3600.0) as avg_sleep_hours,
+        COUNT(*) as days_count
+      FROM \`${PROJECT_ID}.oura_biometrics.${tableName}\`
+      WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
+        AND readiness_score IS NOT NULL
+    ),
+    previous_period AS (
+      SELECT 
+        AVG(readiness_score) as avg_readiness,
+        AVG(sleep_score) as avg_sleep,
+        AVG(activity_score) as avg_activity,
+        SUM(steps) as total_steps
+      FROM \`${PROJECT_ID}.oura_biometrics.${tableName}\`
+      WHERE calendar_date BETWEEN 
+        DATE_SUB('${startDate}', INTERVAL CAST(DATE_DIFF('${endDate}', '${startDate}', DAY) + 1 AS INT64) DAY)
+        AND DATE_SUB('${startDate}', INTERVAL 1 DAY)
+        AND readiness_score IS NOT NULL
+    )
+    SELECT 
+      -- Current period
+      COALESCE(CAST(cp.avg_readiness AS FLOAT64), 0) as current_readiness,
+      COALESCE(CAST(cp.avg_sleep AS FLOAT64), 0) as current_sleep,
+      COALESCE(CAST(cp.avg_activity AS FLOAT64), 0) as current_activity,
+      COALESCE(CAST(cp.total_steps AS INT64), 0) as current_steps,
+      CAST(cp.avg_hrv AS FLOAT64) as current_hrv,
+      CAST(cp.avg_sleep_hours AS FLOAT64) as current_sleep_hours,
+      
+      -- Previous period
+      COALESCE(CAST(pp.avg_readiness AS FLOAT64), 0) as previous_readiness,
+      COALESCE(CAST(pp.avg_sleep AS FLOAT64), 0) as previous_sleep,
+      COALESCE(CAST(pp.avg_activity AS FLOAT64), 0) as previous_activity,
+      COALESCE(CAST(pp.total_steps AS INT64), 0) as previous_steps,
+      
+      -- Deltas
+      COALESCE(CAST(cp.avg_readiness AS FLOAT64), 0) - COALESCE(CAST(pp.avg_readiness AS FLOAT64), 0) as readiness_delta,
+      CASE 
+        WHEN COALESCE(CAST(pp.avg_readiness AS FLOAT64), 0) > 0 
+        THEN ((COALESCE(CAST(cp.avg_readiness AS FLOAT64), 0) - COALESCE(CAST(pp.avg_readiness AS FLOAT64), 0)) / COALESCE(CAST(pp.avg_readiness AS FLOAT64), 1)) * 100
+        ELSE 0 
+      END as readiness_delta_pct,
+      
+      COALESCE(CAST(cp.avg_sleep AS FLOAT64), 0) - COALESCE(CAST(pp.avg_sleep AS FLOAT64), 0) as sleep_delta,
+      CASE 
+        WHEN COALESCE(CAST(pp.avg_sleep AS FLOAT64), 0) > 0 
+        THEN ((COALESCE(CAST(cp.avg_sleep AS FLOAT64), 0) - COALESCE(CAST(pp.avg_sleep AS FLOAT64), 0)) / COALESCE(CAST(pp.avg_sleep AS FLOAT64), 1)) * 100
+        ELSE 0 
+      END as sleep_delta_pct,
+      
+      COALESCE(CAST(cp.avg_activity AS FLOAT64), 0) - COALESCE(CAST(pp.avg_activity AS FLOAT64), 0) as activity_delta,
+      CASE 
+        WHEN COALESCE(CAST(pp.avg_activity AS FLOAT64), 0) > 0 
+        THEN ((COALESCE(CAST(cp.avg_activity AS FLOAT64), 0) - COALESCE(CAST(pp.avg_activity AS FLOAT64), 0)) / COALESCE(CAST(pp.avg_activity AS FLOAT64), 1)) * 100
+        ELSE 0 
+      END as activity_delta_pct,
+      
+      COALESCE(CAST(cp.total_steps AS INT64), 0) - COALESCE(CAST(pp.total_steps AS INT64), 0) as steps_delta,
+      CASE 
+        WHEN COALESCE(CAST(pp.total_steps AS INT64), 0) > 0 
+        THEN ((COALESCE(CAST(cp.total_steps AS INT64), 0) - COALESCE(CAST(pp.total_steps AS INT64), 0)) / CAST(COALESCE(CAST(pp.total_steps AS INT64), 1) AS FLOAT64)) * 100
+        ELSE 0 
+      END as steps_delta_pct,
+      
+      -- Meta
+      CAST(cp.days_count AS INT64) as period_days,
+      CURRENT_TIMESTAMP() as last_updated
+    FROM current_period cp
+    LEFT JOIN previous_period pp ON TRUE
+  `;
+
+  const rows = await query(sql);
+  console.log("[DEBUG] Query executed, rows:", rows?.length, "first row:", rows?.[0] ? "exists" : "null");
+  
+  console.log("[DEBUG] Checking rows, length:", rows?.length);
+  if (!rows || rows.length === 0) {
+    // Sin datos: devolver objeto vacío en lugar de null
+    return {
+      period_days: 0,
+      period_label_es: 'Sin datos',
+      days_count: 0,
+      current_readiness: 0,
+      current_sleep: 0,
+      current_activity: 0,
+      current_steps: 0,
+      current_hrv: null,
+      current_sleep_hours: null,
+      previous_readiness: 0,
+      previous_sleep: 0,
+      previous_activity: 0,
+      previous_steps: 0,
+      readiness_delta: 0,
+      readiness_delta_pct: 0,
+      sleep_delta: 0,
+      sleep_delta_pct: 0,
+      activity_delta: 0,
+      activity_delta_pct: 0,
+      steps_delta: 0,
+      steps_delta_pct: 0,
+      last_updated: new Date().toISOString(),
+    };
+  }
+  
+  const row = rows[0];
+  
+  return {
+    period_days: parseInt(row.period_days) || 0,
+    period_label_es: `Últimos ${row.period_days} días`,
+    days_count: parseInt(row.period_days) || 0,
+    current_readiness: parseFloat(row.current_readiness) || 0,
+    current_sleep: parseFloat(row.current_sleep) || 0,
+    current_activity: parseFloat(row.current_activity) || 0,
+    current_steps: parseInt(row.current_steps) || 0,
+    current_hrv: row.current_hrv ? parseFloat(row.current_hrv) : null,
+    current_sleep_hours: row.current_sleep_hours ? parseFloat(row.current_sleep_hours) : null,
+    previous_readiness: parseFloat(row.previous_readiness) || 0,
+    previous_sleep: parseFloat(row.previous_sleep) || 0,
+    previous_activity: parseFloat(row.previous_activity) || 0,
+    previous_steps: parseInt(row.previous_steps) || 0,
+    readiness_delta: parseFloat(row.readiness_delta) || 0,
+    readiness_delta_pct: parseFloat(row.readiness_delta_pct) || 0,
+    sleep_delta: parseFloat(row.sleep_delta) || 0,
+    sleep_delta_pct: parseFloat(row.sleep_delta_pct) || 0,
+    activity_delta: parseFloat(row.activity_delta) || 0,
+    activity_delta_pct: parseFloat(row.activity_delta_pct) || 0,
+    steps_delta: parseInt(row.steps_delta) || 0,
+    steps_delta_pct: parseFloat(row.steps_delta_pct) || 0,
+    last_updated: row.last_updated,
+  };
+}

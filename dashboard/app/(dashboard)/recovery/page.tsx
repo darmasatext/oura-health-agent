@@ -13,9 +13,11 @@ import { Heart, Activity, Thermometer, Zap } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { parseDate } from '@/lib/date-utils';
 import { useLanguage } from '@/lib/language-context';
+import { useUser } from '@/lib/user-context';
 
-async function fetchRecoveryData(days: number = 7, startDate?: Date, endDate?: Date) {
+async function fetchRecoveryData(days: number = 7, startDate?: Date, endDate?: Date, userSlug?: string) {
   let url = `/api/recovery?type=recent&days=${days}`;
+  if (userSlug) url += `&user=${userSlug}`;
   
   if (startDate && endDate) {
     const start = startDate.toISOString().split('T')[0];
@@ -28,8 +30,9 @@ async function fetchRecoveryData(days: number = 7, startDate?: Date, endDate?: D
   return res.json();
 }
 
-async function fetchRecoveryAverages(days: number = 7, startDate?: Date, endDate?: Date) {
+async function fetchRecoveryAverages(days: number = 7, startDate?: Date, endDate?: Date, userSlug?: string) {
   let url = `/api/recovery?type=averages&days=${days}`;
+  if (userSlug) url += `&user=${userSlug}`;
   
   if (startDate && endDate) {
     const start = startDate.toISOString().split('T')[0];
@@ -50,6 +53,7 @@ function getStatus(value: number, threshold: { good: number; warning: number }):
 
 export default function RecoveryPageBalanced() {
   const { t, language } = useLanguage();
+  const { currentUser } = useUser();
   const locale = language === 'es' ? 'es-MX' : 'en-US';
   
   const getInitialDates = () => {
@@ -74,13 +78,13 @@ export default function RecoveryPageBalanced() {
   const daysDiff = differenceInDays(endDate, startDate) + 1;
 
   const { data: recoveryData, isLoading: loadingData } = useQuery({
-    queryKey: ['recovery-data', startDate.toISOString(), endDate.toISOString(), daysDiff],
-    queryFn: () => fetchRecoveryData(daysDiff, startDate, endDate),
+    queryKey: ['recovery-data', currentUser.slug, startDate.toISOString(), endDate.toISOString(), daysDiff],
+    queryFn: () => fetchRecoveryData(daysDiff, startDate, endDate, currentUser.slug),
   });
 
   const { data: averagesData, isLoading: loadingAvg } = useQuery({
-    queryKey: ['recovery-averages', startDate.toISOString(), endDate.toISOString(), daysDiff],
-    queryFn: () => fetchRecoveryAverages(daysDiff, startDate, endDate),
+    queryKey: ['recovery-averages', currentUser.slug, startDate.toISOString(), endDate.toISOString(), daysDiff],
+    queryFn: () => fetchRecoveryAverages(daysDiff, startDate, endDate, currentUser.slug),
   });
 
   if (loadingData || loadingAvg) {

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { ComparisonCard } from '@/components/dashboard/ComparisonCard';
 import { TrendingUp } from 'lucide-react';
 import { useLanguage } from '@/lib/language-context';
+import { useUser } from '@/lib/user-context';
 
 // Lazy load de charts
 const ComparisonRadarChart = dynamic(
@@ -16,17 +17,18 @@ const ComparisonRadarChart = dynamic(
   }
 );
 
-async function fetchWoWComparison() {
-  const res = await fetch('/api/compare?type=wow');
+async function fetchWoWComparison(userSlug: string) {
+  const res = await fetch(`/api/compare?type=wow&user=${userSlug}`);
   if (!res.ok) throw new Error('Failed to fetch');
   return res.json();
 }
 
 export default function ComparePage() {
   const { t, language } = useLanguage();
+  const { currentUser } = useUser();
   const { data: wowData, isLoading: loadingWow } = useQuery({
-    queryKey: ['comparison-wow'],
-    queryFn: fetchWoWComparison,
+    queryKey: ['comparison-wow', currentUser.slug],
+    queryFn: () => fetchWoWComparison(currentUser.slug),
   });
   
   // Traducir nombres de métricas (vienen en español del backend)

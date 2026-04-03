@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/lib/theme-context";
 import { LanguageProvider } from "@/lib/language-context";
+import { UserProvider } from "@/lib/user-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,13 +48,15 @@ export default function RootLayout({
         <ErrorBoundary>
           <ThemeProvider>
             <LanguageProvider>
-              <ClientProviders>
-                <Navigation />
-                <main className="flex-1 pb-4">
-                  {children}
-                </main>
-                <Footer />
-              </ClientProviders>
+              <UserProvider>
+                <ClientProviders>
+                  <Navigation />
+                  <main className="flex-1 pb-4">
+                    {children}
+                  </main>
+                  <Footer />
+                </ClientProviders>
+              </UserProvider>
             </LanguageProvider>
           </ThemeProvider>
         </ErrorBoundary>

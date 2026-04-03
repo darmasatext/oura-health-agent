@@ -12,6 +12,7 @@ import { TrendingUp, Flame, Calendar, Activity, Sparkles, Info, Star, Lightbulb 
 import { format } from 'date-fns';
 import { es, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/lib/language-context';
+import { useUser } from '@/lib/user-context';
 
 // Lazy load de componentes pesados
 const WeekdayHeatmap = dynamic(
@@ -39,7 +40,7 @@ const StreakTimeline = dynamic(
 );
 
 // Fetch functions con medición de performance
-async function fetchWeekdayAnalysis() {
+async function fetchWeekdayAnalysis(userSlug: string) {
   const start = performance.now();
   const res = await fetch('/api/insights?type=weekday');
   if (!res.ok) throw new Error('Failed to fetch weekday analysis');
@@ -48,7 +49,7 @@ async function fetchWeekdayAnalysis() {
   return data;
 }
 
-async function fetchCorrelations() {
+async function fetchCorrelations(userSlug: string) {
   const start = performance.now();
   const res = await fetch('/api/insights?type=correlations');
   if (!res.ok) throw new Error('Failed to fetch correlations');
@@ -57,7 +58,7 @@ async function fetchCorrelations() {
   return data;
 }
 
-async function fetchStreaks() {
+async function fetchStreaks(userSlug: string) {
   const start = performance.now();
   const res = await fetch('/api/insights?type=streaks');
   if (!res.ok) throw new Error('Failed to fetch streaks');
@@ -66,7 +67,7 @@ async function fetchStreaks() {
   return data;
 }
 
-async function fetchSuperDays() {
+async function fetchSuperDays(userSlug: string) {
   const start = performance.now();
   const res = await fetch('/api/insights?type=superdays');
   if (!res.ok) throw new Error('Failed to fetch super days');
@@ -87,6 +88,7 @@ async function fetchHealthInsights() {
 
 export default function InsightsPage() {
   const { t, language } = useLanguage();
+  const { currentUser } = useUser();
   const locale = language === 'es' ? es : enUS;
   
   // Función para traducir días de la semana (vienen en español del backend)
@@ -127,25 +129,25 @@ export default function InsightsPage() {
 
   const { data: weekdayData, isLoading: weekdayLoading } = useQuery({
     queryKey: ['weekday-analysis'],
-    queryFn: fetchWeekdayAnalysis,
+    queryFn: () => fetchWeekdayAnalysis(currentUser.slug),
     ...cacheConfig,
   });
 
   const { data: correlationsData, isLoading: correlationsLoading } = useQuery({
     queryKey: ['correlations'],
-    queryFn: fetchCorrelations,
+    queryFn: () => fetchCorrelations(currentUser.slug),
     ...cacheConfig,
   });
 
   const { data: streaksData, isLoading: streaksLoading } = useQuery({
     queryKey: ['streaks'],
-    queryFn: fetchStreaks,
+    queryFn: () => fetchStreaks(currentUser.slug),
     ...cacheConfig,
   });
 
   const { data: superDaysData, isLoading: superDaysLoading } = useQuery({
     queryKey: ['superdays'],
-    queryFn: fetchSuperDays,
+    queryFn: () => fetchSuperDays(currentUser.slug),
     ...cacheConfig,
   });
 

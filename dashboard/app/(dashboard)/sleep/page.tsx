@@ -13,9 +13,15 @@ import { parseDate } from '@/lib/date-utils';
 import { Card } from '@/components/ui/card';
 import { Moon, Heart, Clock, Bed, Brain } from 'lucide-react';
 import { useLanguage } from '@/lib/language-context';
+import { useUser } from '@/lib/user-context';
 
-async function fetchSleepData(days: number = 7, startDate?: Date, endDate?: Date) {
+async function fetchSleepData(days: number = 7, startDate?: Date, endDate?: Date, userSlug?: string) {
   let url = `/api/sleep?type=recent&days=${days}`;
+  
+  // Agregar user slug
+  if (userSlug) {
+    url += `&user=${userSlug}`;
+  }
   
   // Agregar fechas específicas si están disponibles
   if (startDate && endDate) {
@@ -29,8 +35,12 @@ async function fetchSleepData(days: number = 7, startDate?: Date, endDate?: Date
   return res.json();
 }
 
-async function fetchSleepAverages(days: number = 7, startDate?: Date, endDate?: Date) {
+async function fetchSleepAverages(days: number = 7, startDate?: Date, endDate?: Date, userSlug?: string) {
   let url = `/api/sleep?type=averages&days=${days}`;
+  
+  if (userSlug) {
+    url += `&user=${userSlug}`;
+  }
   
   if (startDate && endDate) {
     const start = startDate.toISOString().split('T')[0];
@@ -51,6 +61,7 @@ function getStatus(value: number, threshold: { good: number; warning: number }):
 
 export default function SleepPageBalanced() {
   const { t, language } = useLanguage();
+  const { currentUser } = useUser();
   const locale = language === 'es' ? 'es-MX' : 'en-US';
   
   const getInitialDates = () => {
@@ -75,13 +86,13 @@ export default function SleepPageBalanced() {
   const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
   const { data: sleepData, isLoading: loadingData } = useQuery({
-    queryKey: ['sleep-data', startDate.toISOString(), endDate.toISOString(), daysDiff],
-    queryFn: () => fetchSleepData(daysDiff, startDate, endDate),
+    queryKey: ['sleep-data', currentUser.slug, startDate.toISOString(), endDate.toISOString(), daysDiff],
+    queryFn: () => fetchSleepData(daysDiff, startDate, endDate, currentUser.slug),
   });
 
   const { data: averages, isLoading: loadingAvg } = useQuery({
-    queryKey: ['sleep-averages', startDate.toISOString(), endDate.toISOString(), daysDiff],
-    queryFn: () => fetchSleepAverages(daysDiff, startDate, endDate),
+    queryKey: ['sleep-averages', currentUser.slug, startDate.toISOString(), endDate.toISOString(), daysDiff],
+    queryFn: () => fetchSleepAverages(daysDiff, startDate, endDate, currentUser.slug),
   });
 
   if (loadingData || loadingAvg) {
