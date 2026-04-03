@@ -35,3 +35,8 @@ core.*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Backup files
+*backup*
+*-original*
+*.bak

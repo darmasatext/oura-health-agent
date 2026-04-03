@@ -84,6 +84,7 @@ export async function getRecoveryData(startDate: string, endDate: string, userSl
       readiness_score,
       average_heart_rate,
       lowest_heart_rate,
+      average_hrv_ms,
       temperature_deviation_celsius,
       resilience_level
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
@@ -105,6 +106,7 @@ export async function getRecoveryAverages(days: number, startDate?: string, endD
       AVG(readiness_score) as avg_readiness,
       AVG(average_heart_rate) as avg_hr,
       AVG(lowest_heart_rate) as avg_rhr,
+      AVG(average_hrv_ms) as avg_hrv,
       AVG(temperature_deviation_celsius) as avg_temp,
       COUNT(*) as total_days,
       SUM(CASE WHEN readiness_score >= 85 THEN 1 ELSE 0 END) as optimal_days

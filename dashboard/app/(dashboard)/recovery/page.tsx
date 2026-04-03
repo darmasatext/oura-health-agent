@@ -7,7 +7,9 @@ import { DateSelector } from '@/components/dashboard/DateSelector';
 import { MetricCardEnhanced } from '@/components/dashboard/MetricCardEnhanced';
 import { SimplifiedBarChart } from '@/components/charts/SimplifiedBarChart';
 import { ReadinessChart } from '@/components/charts/ReadinessChart';
-import { HRVChart } from '@/components/charts/HRVChart';
+import { HRVVariabilityChart } from '@/components/charts/HRVVariabilityChart';
+import { RestingHeartRateChart } from '@/components/charts/RestingHeartRateChart';
+import { AverageHeartRateChart } from '@/components/charts/HRVChart';
 import { Card } from '@/components/ui/card';
 import { Heart, Activity, Thermometer, Zap } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
@@ -107,7 +109,7 @@ export default function RecoveryPageBalanced() {
   // Promedios
   const avgReadiness = averages.avg_readiness || 0;
   const avgRestingHR = averages.avg_hr || 0;
-  const avgHRAvg = averages.avg_hr_avg || 0;
+  const avgHRV = averages.avg_hrv || 0;
   const avgTemp = averages.avg_temp || 0;
 
   // Preparar datos para gráficas (hasta 90 días)
@@ -176,7 +178,7 @@ export default function RecoveryPageBalanced() {
             <Zap className="h-6 w-6 text-yellow-600" />
             <h3 className="text-lg font-semibold">{t('recovery.heart_rate_variability')}</h3>
           </div>
-          <p className="text-4xl font-bold mb-2">{avgHRAvg.toFixed(1)} {t('recovery.bpm_short')}</p>
+          <p className="text-4xl font-bold mb-2">{avgHRV.toFixed(1)} <span className="text-lg">{t('recovery.milliseconds')}</span></p>
           <p className="text-sm text-gray-600 mb-1">
             💓 {t('recovery.hrv_average')}
           </p>
@@ -213,12 +215,30 @@ export default function RecoveryPageBalanced() {
           </p>
         </Card>
 
-        {/* Gráfica 2: Frecuencia cardíaca en reposo */}
+        {/* Gráfica 2: Variabilidad Cardíaca (HRV) */}
         <Card className="p-6">
-          <h3 className="text-xl font-bold mb-4">{t('recovery.hr_chart_title')}</h3>
-          {recovery.length > 0 && <HRVChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
+          <h3 className="text-xl font-bold mb-4">💓 {t('recovery.hrv_variability_chart')}</h3>
+          {recovery.length > 0 && <HRVVariabilityChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
           <p className="text-xs text-gray-500 mt-4 text-center">
-            {t('recovery.hr_chart_description')}
+            {t('recovery.hrv_description')}
+          </p>
+        </Card>
+
+        {/* Gráfica 3: Frecuencia Cardíaca en Reposo (RHR) */}
+        <Card className="p-6">
+          <h3 className="text-xl font-bold mb-4">🫀 {t('recovery.resting_hr_chart')}</h3>
+          {recovery.length > 0 && <RestingHeartRateChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
+          <p className="text-xs text-gray-500 mt-4 text-center">
+            {t('recovery.resting_hr_chart_description')}
+          </p>
+        </Card>
+
+        {/* Gráfica 4: Frecuencia Cardíaca Promedio */}
+        <Card className="p-6">
+          <h3 className="text-xl font-bold mb-4">❤️ {t('recovery.average_hr_chart')}</h3>
+          {recovery.length > 0 && <AverageHeartRateChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
+          <p className="text-xs text-gray-500 mt-4 text-center">
+            {t('recovery.average_hr_chart_description')}
           </p>
         </Card>
       </div>

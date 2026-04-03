@@ -19,15 +19,6 @@ export function SimplifiedBarChart({
 }: SimplifiedBarChartProps) {
   const { theme } = useTheme();
   
-  // WORKAROUND: Recharts omite el último label cuando hay ≤4 elementos
-  // Agregar elementos dummy invisibles para forzar rendering completo
-  const dummiesNeeded = data.length < 5 ? 3 : 2;
-  const dummies = Array(dummiesNeeded).fill(null).map((_, i) => ({ 
-    label: ' '.repeat(i + 1), 
-    value: 0 
-  }));
-  const dataWithDummy = [...data, ...dummies];
-  
   const getBarColor = (value: number): string => {
     if (value >= threshold.good) return ACCESSIBLE_COLORS.good.border;
     if (value >= threshold.warning) return ACCESSIBLE_COLORS.warning.border;
@@ -45,9 +36,6 @@ export function SimplifiedBarChart({
   const chartDescription = data
     .map(d => `${d.label}: ${d.value}`)
     .join(', ');
-    
-  // Solo mostrar labels cuando hay 14 días o menos (sin contar el dummy)
-  const shouldShowLabelsAdjusted = data.length <= 14;
 
   return (
     <div 
@@ -58,7 +46,7 @@ export function SimplifiedBarChart({
       
       <ResponsiveContainer width="100%" height={300}>
         <BarChart 
-          data={dataWithDummy}
+          data={data}
           margin={{ top: 20, right: 100, left: 20, bottom: data.length > 10 ? 80 : 20 }}
           aria-label={`Gráfica de barras: ${title}`}
           barCategoryGap="10%"
@@ -89,14 +77,14 @@ export function SimplifiedBarChart({
             aria-label="Valores de datos"
             isAnimationActive={false}
           >
-            {dataWithDummy.map((entry, index) => (
+            {data.map((entry, index) => (
               <Cell 
                 key={`cell-${entry.label}-${index}-${entry.value}`} 
-                fill={entry.label === '' ? 'transparent' : getBarColor(entry.value)} 
+                fill={getBarColor(entry.value)} 
               />
             ))}
             {/* VALORES ARRIBA DE BARRAS - Solo si hay ≤14 días */}
-            {shouldShowLabelsAdjusted && (
+            {shouldShowLabels && (
               <LabelList 
                 dataKey="value" 
                 position="top" 

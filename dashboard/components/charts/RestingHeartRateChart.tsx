@@ -7,14 +7,14 @@ import { es, enUS } from 'date-fns/locale';
 import { useTheme } from '@/lib/theme-context';
 import { useLanguage } from '@/lib/language-context';
 
-interface AverageHeartRateChartProps {
+interface RestingHeartRateChartProps {
   data: Array<{
     calendar_date: string;
-    average_heart_rate: number;
+    lowest_heart_rate: number;
   }>;
 }
 
-export function AverageHeartRateChart({ data }: AverageHeartRateChartProps) {
+export function RestingHeartRateChart({ data }: RestingHeartRateChartProps) {
   const { theme } = useTheme();
   const { t, language } = useLanguage();
   const locale = language === 'es' ? es : enUS;
@@ -22,10 +22,12 @@ export function AverageHeartRateChart({ data }: AverageHeartRateChartProps) {
   const axisColor = theme === 'dark' ? '#9CA3AF' : '#6B7280';
   const gridColor = theme === 'dark' ? '#4B5563' : '#e5e7eb';
   
-  const chartData = data.map(item => ({
-    date: format(parseDate(item.calendar_date) || new Date(), 'dd MMM', { locale }),
-    hr: item.average_heart_rate,
-  }));
+  const chartData = data
+    .filter(item => item.lowest_heart_rate != null && item.lowest_heart_rate > 0)
+    .map(item => ({
+      date: format(parseDate(item.calendar_date) || new Date(), 'dd MMM', { locale }),
+      rhr: item.lowest_heart_rate,
+    }));
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -42,7 +44,7 @@ export function AverageHeartRateChart({ data }: AverageHeartRateChartProps) {
         >
           <p style={{ fontWeight: 600, marginBottom: '8px', color: textColor }}>{label}</p>
           <p style={{ color: payload[0].color, margin: '4px 0' }}>
-            {t('recovery.average_hr')}: {payload[0].value} {t('recovery.bpm_short')}
+            {t('recovery.resting_hr_label')}: {payload[0].value} {t('recovery.bpm_short')}
           </p>
         </div>
       );
@@ -58,16 +60,17 @@ export function AverageHeartRateChart({ data }: AverageHeartRateChartProps) {
         <YAxis 
           tick={{ fontSize: 14, fill: textColor }}
           stroke={axisColor}
-          label={{ 
-            value: t('recovery.beats_per_min'), 
-            angle: -90, 
-            position: 'insideLeft',
-            fontSize: 12,
-            style: { fontSize: 14, fontWeight: 600, textAnchor: 'middle', fill: textColor }
-          }} 
+          label={{ value: t('recovery.beats_per_min'), angle: -90, position: 'insideLeft', style: { fill: textColor, fontSize: 12 } }}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Area type="monotone" dataKey="hr" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.3} name="Frecuencia Cardíaca" />
+        <Area 
+          type="monotone" 
+          dataKey="rhr" 
+          stroke="#3B82F6" 
+          fill="#3B82F6" 
+          fillOpacity={0.3}
+          strokeWidth={2}
+        />
       </AreaChart>
     </ResponsiveContainer>
   );
