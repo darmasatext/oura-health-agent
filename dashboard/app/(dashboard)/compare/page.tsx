@@ -23,11 +23,27 @@ async function fetchWoWComparison() {
 }
 
 export default function ComparePage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { data: wowData, isLoading: loadingWow } = useQuery({
     queryKey: ['comparison-wow'],
     queryFn: fetchWoWComparison,
   });
+  
+  // Traducir nombres de métricas (vienen en español del backend)
+  const translateMetric = (metricName: string): string => {
+    if (language === 'es') return metricName;
+    
+    const metricMap: Record<string, string> = {
+      'Calidad de Sueño': 'Sleep Quality',
+      'Recuperación': 'Recovery',
+      'Actividad': 'Activity',
+      'Horas de Sueño': 'Sleep Hours',
+      'Eficiencia del Sueño': 'Sleep Efficiency',
+      'Frecuencia Cardíaca': 'Heart Rate',
+      'Pasos Totales': 'Total Steps',
+    };
+    return metricMap[metricName] || metricName;
+  };
 
   if (loadingWow) {
     return (
@@ -97,14 +113,90 @@ export default function ComparePage() {
         </div>
       </div>
 
-      {/* Gráfica comparativa - Radar */}
-      <Card className="p-6">
-        <h3 className="text-xl font-bold mb-2">{t('compare.visual_comparison_radar')}</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          {t('compare.radar_description')}
-        </p>
-        <ComparisonRadarChart data={comparisons} />
-      </Card>
+      {/* Gráfica comparativa - Radar con Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Radar Chart - 2/3 del espacio */}
+        <Card className="p-6 lg:col-span-2">
+          <h3 className="text-xl font-bold mb-2">{t('compare.visual_comparison_radar')}</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            {t('compare.radar_description')}
+          </p>
+          <ComparisonRadarChart data={comparisons} />
+        </Card>
+
+        {/* Insights Panel - 1/3 del espacio */}
+        <Card className="p-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-2 border-blue-200 dark:border-blue-800">
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2 dark:text-gray-100">
+            <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            {t('compare.key_findings')}
+          </h3>
+          
+          <div className="space-y-4">
+            {/* Top Improvement */}
+            {(() => {
+              const topImprovement = comparisons
+                .filter((c: any) => c.change_pct > 0)
+                .sort((a: any, b: any) => b.change_pct - a.change_pct)[0];
+              
+              if (topImprovement) {
+                return (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                    <div className="text-xs font-semibold text-green-600 dark:text-green-400 mb-1">
+                      🚀 {t('compare.biggest_improvement')}
+                    </div>
+                    <div className="font-bold dark:text-gray-100">{translateMetric(topImprovement.metric)}</div>
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      +{topImprovement.change_pct.toFixed(1)}%
+                    </div>
+                  </div>
+                );
+              }
+            })()}
+
+            {/* Top Decline */}
+            {(() => {
+              const topDecline = comparisons
+                .filter((c: any) => c.change_pct < 0)
+                .sort((a: any, b: any) => a.change_pct - b.change_pct)[0];
+              
+              if (topDecline) {
+                return (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+                    <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-1">
+                      ⚠️ {t('compare.needs_attention')}
+                    </div>
+                    <div className="font-bold dark:text-gray-100">{translateMetric(topDecline.metric)}</div>
+                    <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                      {topDecline.change_pct.toFixed(1)}%
+                    </div>
+                  </div>
+                );
+              }
+            })()}
+
+            {/* Summary Stats */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                📊 {t('compare.summary')}
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div className="text-gray-500 dark:text-gray-400">{t('compare.improved')}</div>
+                  <div className="font-bold text-green-600 dark:text-green-400">
+                    {comparisons.filter((c: any) => c.change_pct > 0).length}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500 dark:text-gray-400">{t('compare.declined')}</div>
+                  <div className="font-bold text-red-600 dark:text-red-400">
+                    {comparisons.filter((c: any) => c.change_pct < 0).length}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
 
 
     </div>

@@ -2,6 +2,7 @@
 
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { useTheme } from '@/lib/theme-context';
+import { useLanguage } from '@/lib/language-context';
 
 interface ComparisonRadarChartProps {
   data: Array<{
@@ -14,10 +15,35 @@ interface ComparisonRadarChartProps {
 
 export function ComparisonRadarChart({ data }: ComparisonRadarChartProps) {
   const { theme } = useTheme();
+  const { t, language } = useLanguage();
   
   // Colores dinámicos para dark mode
   const textColor = theme === 'dark' ? '#D1D5DB' : '#374151';
   const gridColor = theme === 'dark' ? '#4B5563' : '#d1d5db';
+  
+  const thisWeekLabel = t('compare.this_week');
+  const previousWeekLabel = t('compare.previous_week');
+  
+  // Traducir nombres de métricas
+  const translateMetric = (metricName: string): string => {
+    if (language === 'es') return metricName;
+    
+    const metricMap: Record<string, string> = {
+      'Calidad de Sueño': 'Sleep Quality',
+      'Recuperación': 'Recovery',
+      'Actividad': 'Activity',
+      'Horas de Sueño': 'Sleep Hours',
+      'Eficiencia del Sueño': 'Sleep Efficiency',
+      'Frecuencia Cardíaca': 'Heart Rate',
+      'Pasos Totales': 'Total Steps',
+      'Nivel de Actividad': 'Activity Level',
+      'Calorías Activas': 'Active Calories',
+      'Minutos Activos': 'Active Minutes',
+      'Sueño Profundo': 'Deep Sleep',
+      'Sueño REM': 'REM Sleep',
+    };
+    return metricMap[metricName] || metricName;
+  };
   
   // Normalizar datos a escala 0-100 para el radar
   const normalizeValue = (value: number, unit: string, metric: string): number => {
@@ -39,9 +65,9 @@ export function ComparisonRadarChart({ data }: ComparisonRadarChartProps) {
   };
 
   const radarData = data.map(item => ({
-    metric: item.metric,
-    'Esta Semana': normalizeValue(item.current_value, item.unit, item.metric),
-    'Semana Anterior': normalizeValue(item.previous_value, item.unit, item.metric),
+    metric: translateMetric(item.metric),
+    [thisWeekLabel]: normalizeValue(item.current_value, item.unit, item.metric),
+    [previousWeekLabel]: normalizeValue(item.previous_value, item.unit, item.metric),
   }));
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -70,12 +96,13 @@ export function ComparisonRadarChart({ data }: ComparisonRadarChartProps) {
   };
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <RadarChart data={radarData}>
+    <ResponsiveContainer width="100%" height={500}>
+      <RadarChart data={radarData} margin={{ top: 40, right: 40, bottom: 40, left: 40 }}>
         <PolarGrid stroke={gridColor} />
         <PolarAngleAxis 
           dataKey="metric" 
           tick={{ fontSize: 13, fontWeight: 500, fill: textColor }}
+          tickSize={15}
         />
         <PolarRadiusAxis 
           angle={90} 
@@ -83,16 +110,16 @@ export function ComparisonRadarChart({ data }: ComparisonRadarChartProps) {
           tick={{ fontSize: 12, fill: textColor }}
         />
         <Radar
-          name="Esta Semana"
-          dataKey="Esta Semana"
+          name={thisWeekLabel}
+          dataKey={thisWeekLabel}
           stroke="#3b82f6"
           fill="#3b82f6"
           fillOpacity={0.5}
           strokeWidth={2}
         />
         <Radar
-          name="Semana Anterior"
-          dataKey="Semana Anterior"
+          name={previousWeekLabel}
+          dataKey={previousWeekLabel}
           stroke="#22c55e"
           fill="#22c55e"
           fillOpacity={0.3}

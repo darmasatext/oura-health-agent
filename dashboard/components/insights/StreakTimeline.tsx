@@ -43,9 +43,9 @@ export function StreakTimeline({ streaks }: StreakTimelineProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Flame className={`h-5 w-5 ${textColor}`} />
-                <span className="font-semibold text-sm">{streak.label}</span>
-                <span className="text-xs text-muted-foreground">
-                  (≥{streak.threshold} puntos)
+                <span className="font-semibold text-sm dark:text-gray-200">{streak.label}</span>
+                <span className="text-xs text-muted-foreground dark:text-gray-400">
+                  (≥{streak.threshold} {t('insights.points')})
                 </span>
               </div>
               <div className="text-right">
@@ -77,11 +77,11 @@ export function StreakTimeline({ streaks }: StreakTimelineProps) {
             </div>
 
             {/* Status text */}
-            <div className="text-xs text-muted-foreground text-center">
-              {streak.current_streak === 0 && '🔥 ¡Empieza una nueva racha!'}
-              {streak.current_streak > 0 && streak.current_streak <= 3 && '🌱 Racha en progreso'}
-              {streak.current_streak > 3 && streak.current_streak < streak.max_streak && '🔥 ¡Buen ritmo!'}
-              {streak.current_streak > 0 && streak.current_streak === streak.max_streak && '🏆 ¡Nuevo récord!'}
+            <div className="text-xs text-muted-foreground dark:text-gray-400 text-center">
+              {streak.current_streak === 0 && `🔥 ${t('insights.streak_start_new')}`}
+              {streak.current_streak > 0 && streak.current_streak <= 3 && `🌱 ${t('insights.streak_in_progress')}`}
+              {streak.current_streak > 3 && streak.current_streak < streak.max_streak && `🔥 ${t('insights.streak_good_pace')}`}
+              {streak.current_streak > 0 && streak.current_streak === streak.max_streak && `🏆 ${t('insights.streak_new_record')}`}
             </div>
           </div>
         );
