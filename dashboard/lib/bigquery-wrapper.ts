@@ -44,18 +44,42 @@ function getBigQueryClient() {
 
 /**
  * Serializa valores especiales de BigQuery a formatos simples
- * Convierte {value: "..."} a valores directos
+ * Convierte {value: "..."} a valores directos recursivamente
  */
+function serializeValue(value: any): any {
+  // Null o undefined
+  if (value === null || value === undefined) {
+    return value;
+  }
+  
+  // Si es un objeto con propiedad 'value', extraer el valor
+  if (typeof value === 'object' && 'value' in value && Object.keys(value).length === 1) {
+    return serializeValue(value.value);
+  }
+  
+  // Si es un array, serializar cada elemento
+  if (Array.isArray(value)) {
+    return value.map(serializeValue);
+  }
+  
+  // Si es un objeto, serializar recursivamente
+  if (typeof value === 'object') {
+    const serialized: any = {};
+    for (const [key, val] of Object.entries(value)) {
+      serialized[key] = serializeValue(val);
+    }
+    return serialized;
+  }
+  
+  // Valores primitivos (string, number, boolean)
+  return value;
+}
+
 function serializeRow(row: any): QueryResult {
   const serialized: QueryResult = {};
   
   for (const [key, value] of Object.entries(row)) {
-    // Si es un objeto con propiedad 'value', extraer el valor
-    if (value && typeof value === 'object' && 'value' in value) {
-      serialized[key] = value.value;
-    } else {
-      serialized[key] = value;
-    }
+    serialized[key] = serializeValue(value);
   }
   
   return serialized;
