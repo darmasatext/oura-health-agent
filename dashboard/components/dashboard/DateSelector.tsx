@@ -6,7 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es, enUS } from 'date-fns/locale';
+import { useLanguage } from '@/lib/language-context';
 
 interface DateSelectorProps {
   startDate: Date;
@@ -15,6 +16,9 @@ interface DateSelectorProps {
 }
 
 export function DateSelector({ startDate, endDate, onDateChange }: DateSelectorProps) {
+  const { t, language } = useLanguage();
+  const locale = language === 'es' ? es : enUS;
+  
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startDate,
     to: endDate,
@@ -29,9 +33,9 @@ export function DateSelector({ startDate, endDate, onDateChange }: DateSelectorP
   }, [startDate, endDate]);
 
   const presets = [
-    { label: 'Últimos 7 días', days: 7 },
-    { label: 'Últimos 30 días', days: 30 },
-    { label: 'Últimos 90 días', days: 90 },
+    { label: t('date.last_7_days'), days: 7 },
+    { label: t('date.last_30_days'), days: 30 },
+    { label: t('date.last_90_days'), days: 90 },
   ];
 
   const handlePresetClick = (days: number) => {
@@ -66,8 +70,8 @@ export function DateSelector({ startDate, endDate, onDateChange }: DateSelectorP
               onClick={() => handlePresetClick(preset.days)}
               className={`px-4 py-2 rounded-lg text-base font-medium transition-colors ${
                 isActive 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                  ? 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600' 
+                  : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100'
               }`}
             >
               {preset.label}
@@ -77,29 +81,29 @@ export function DateSelector({ startDate, endDate, onDateChange }: DateSelectorP
       </div>
 
       {/* Separador */}
-      <span className="text-gray-400 hidden md:inline">o</span>
+      <span className="text-gray-400 hidden md:inline">{t('date.or')}</span>
 
       {/* Selector de calendario CON RANGO */}
       <Popover>
-        <PopoverTrigger className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 text-gray-900 rounded-lg hover:bg-gray-50 text-base font-medium min-h-[44px] transition-colors">
+        <PopoverTrigger className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-base font-medium min-h-[44px] transition-colors">
           <Calendar className="h-5 w-5" />
           {dateRange?.from && dateRange?.to ? (
             <>
-              {format(dateRange.from, 'dd MMM', { locale: es })} -{' '}
-              {format(dateRange.to, 'dd MMM yyyy', { locale: es })}
+              {format(dateRange.from, 'dd MMM', { locale })} -{' '}
+              {format(dateRange.to, 'dd MMM yyyy', { locale })}
             </>
           ) : (
-            'Personalizar fechas'
+            t('date.custom_range')
           )}
         </PopoverTrigger>
         
-        <PopoverContent className="w-auto p-4" align="end">
+        <PopoverContent className="w-auto p-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700" align="end">
           <CalendarComponent
             mode="range"
             selected={dateRange}
             onSelect={handleCalendarSelect}
             numberOfMonths={2}
-            locale={es}
+            locale={locale}
             disabled={(date) => date > new Date()}
             classNames={{
               day_range_start: "bg-blue-600 text-white hover:bg-blue-700",

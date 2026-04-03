@@ -205,7 +205,7 @@ export const helpContent = {
     short: "Desviación de tu temperatura corporal normal.",
     long: (
       <>
-        <h2>Temperatura Corporal</h2>
+        <h2>Cambios en Temperatura Corporal</h2>
         <p>Oura mide tu temperatura relativa (no absoluta) para detectar cambios.</p>
         <h3>Qué significan las variaciones:</h3>
         <ul>

@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { ACCESSIBLE_COLORS } from '@/lib/accessibility-colors';
+import { useTheme } from '@/lib/theme-context';
 
 interface SimplifiedBarChartProps {
   data: Array<{ label: string; value: number }>;
@@ -16,11 +17,17 @@ export function SimplifiedBarChart({
   title,
   yAxisLabel 
 }: SimplifiedBarChartProps) {
+  const { theme } = useTheme();
+  
   const getBarColor = (value: number): string => {
     if (value >= threshold.good) return ACCESSIBLE_COLORS.good.border;
     if (value >= threshold.warning) return ACCESSIBLE_COLORS.warning.border;
     return ACCESSIBLE_COLORS.attention.border;
   };
+
+  // Colores que funcionan en ambos modos
+  const textColor = theme === 'dark' ? '#D1D5DB' : '#374151'; // gray-300 : gray-700
+  const axisColor = theme === 'dark' ? '#9CA3AF' : '#6B7280'; // gray-400 : gray-500
 
   // Solo mostrar labels cuando hay 14 días o menos
   const shouldShowLabels = data.length <= 14;
@@ -44,17 +51,17 @@ export function SimplifiedBarChart({
         >
           <XAxis 
             dataKey="label" 
-            tick={{ fontSize: 16, fontWeight: 'bold' }}
-            stroke="#374151"
+            tick={{ fontSize: 16, fontWeight: 'bold', fill: textColor }}
+            stroke={axisColor}
           />
           <YAxis 
-            tick={{ fontSize: 16, fontWeight: 'bold' }}
-            stroke="#374151"
+            tick={{ fontSize: 16, fontWeight: 'bold', fill: textColor }}
+            stroke={axisColor}
             label={yAxisLabel ? { 
               value: yAxisLabel, 
               angle: -90, 
               position: 'insideLeft',
-              style: { fontSize: 16, fontWeight: 'bold' }
+              style: { fontSize: 16, fontWeight: 'bold', fill: textColor }
             } : undefined}
           />
           <Bar 
@@ -76,7 +83,7 @@ export function SimplifiedBarChart({
                 style={{ 
                   fontSize: 16, 
                   fontWeight: 'bold',
-                  fill: '#374151' 
+                  fill: textColor 
                 }}
                 formatter={(value) => typeof value === 'number' ? value.toLocaleString('es-MX') : ''}
               />

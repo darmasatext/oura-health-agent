@@ -59,3 +59,4 @@ workspace/
 service-account.json
 gcp-service-account.json
 gcp-key-oneline.txt
+config/user_tokens.json

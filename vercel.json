@@ -1,9 +1,0 @@
-{
-  "buildCommand": "cd dashboard && npm ci && npm run build",
-  "outputDirectory": "dashboard/.next",
-  "installCommand": "cd dashboard && npm ci",
-  "framework": null,
-  "env": {
-    "NEXT_PUBLIC_API_URL": "/api"
-  }
-}

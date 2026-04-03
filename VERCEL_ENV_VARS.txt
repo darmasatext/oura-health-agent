@@ -1,0 +1,13 @@
+# Variables de Entorno para Vercel
+# Copia y pega estas cuando Vercel te las pida
+
+GOOGLE_CLOUD_PROJECT_ID=last-240000
+BIGQUERY_DATASET=oura_biometrics
+BIGQUERY_TABLE=daily_biometrics_gold
+
+# IMPORTANTE: Para GOOGLE_APPLICATION_CREDENTIALS_JSON
+# Copia TODO el contenido del archivo gcp-service-account.json
+# En UNA SOLA LÍNEA (sin saltos de línea)
+# 
+# O usa el contenido del archivo gcp-key-oneline.txt que está preparado
+

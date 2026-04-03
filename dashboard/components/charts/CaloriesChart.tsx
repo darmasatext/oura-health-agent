@@ -4,6 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { format } from 'date-fns';
 import { parseDate } from '@/lib/date-utils';
 import { es } from 'date-fns/locale';
+import { useTheme } from '@/lib/theme-context';
 
 interface CaloriesChartProps {
   data: Array<{
@@ -14,11 +15,40 @@ interface CaloriesChartProps {
 }
 
 export function CaloriesChart({ data }: CaloriesChartProps) {
+  const { theme } = useTheme();
+  const textColor = theme === 'dark' ? '#D1D5DB' : '#374151';
+  const axisColor = theme === 'dark' ? '#9CA3AF' : '#6B7280';
+  const gridColor = theme === 'dark' ? '#4B5563' : '#e5e7eb';
+  
   const chartData = data.map(item => ({
     date: format(parseDate(item.calendar_date) || new Date(), 'dd MMM', { locale: es }),
     activas: Math.round(item.active_calories),
     totales: Math.round(item.total_calories),
   }));
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div 
+          style={{
+            backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
+            border: `1px solid ${theme === 'dark' ? '#4B5563' : '#E5E7EB'}`,
+            borderRadius: '8px',
+            padding: '10px',
+            color: textColor
+          }}
+        >
+          <p style={{ fontWeight: 600, marginBottom: '8px', color: textColor }}>{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color, margin: '4px 0' }}>
+              {entry.name}: {(entry.value as number).toLocaleString('es-MX')} kcal
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -33,13 +63,14 @@ export function CaloriesChart({ data }: CaloriesChartProps) {
             <stop offset="95%" stopColor="#94a3b8" stopOpacity={0.1}/>
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis label={{ value: 'Calorías (kcal)', angle: -90, position: 'insideLeft' }} />
-        <Tooltip 
-          formatter={(value) => (typeof value === 'number' ? value.toLocaleString('es-MX') + ' kcal' : value)}
-          labelStyle={{ color: '#000' }}
+        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+        <XAxis dataKey="date" tick={{ fill: textColor }} stroke={axisColor} />
+        <YAxis 
+          tick={{ fill: textColor }}
+          stroke={axisColor}
+          label={{ value: 'Calorías (kcal)', angle: -90, position: 'insideLeft', style: { fill: textColor } }} 
         />
+        <Tooltip content={<CustomTooltip />} />
         <Legend />
         <Area 
           type="monotone" 

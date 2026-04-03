@@ -4,31 +4,48 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Moon, Activity, Heart, Sparkles, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
+import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
+import { useLanguage } from '@/lib/language-context';
 
 // Navegación balanceada - Array CONSTANTE fuera del componente para evitar hydration issues
 const NAV_LINKS = [
-  { href: '/', label: 'Inicio', icon: Home },
-  { href: '/sleep', label: 'Sueño', icon: Moon },
-  { href: '/activity', label: 'Actividad', icon: Activity },
-  { href: '/recovery', label: 'Recuperación', icon: Heart },
-  { href: '/insights', label: 'Análisis', icon: Sparkles },  // ✅ SIEMPRE "Análisis"
-  { href: '/compare', label: 'Comparar', icon: TrendingUp },
+  { href: '/', labelKey: 'nav.home', icon: Home },
+  { href: '/sleep', labelKey: 'nav.sleep', icon: Moon },
+  { href: '/activity', labelKey: 'nav.activity', icon: Activity },
+  { href: '/recovery', labelKey: 'nav.recovery', icon: Heart },
+  { href: '/insights', labelKey: 'nav.insights', icon: Sparkles },
+  { href: '/compare', labelKey: 'nav.compare', icon: TrendingUp },
 ] as const;
 
 export function Navigation() {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
-    <nav className="bg-white border-b-2 border-gray-200 shadow-sm" role="navigation" aria-label="Navegación principal">
+    <nav className="bg-white dark:bg-gray-800 border-b-2 border-gray-200 dark:border-gray-700 shadow-sm transition-colors" role="navigation" aria-label="Navegación principal">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between py-4 gap-4">
-          {/* Logo */}
-          <Link 
-            href="/" 
-            className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors text-center md:text-left"
-          >
-            Oura Dashboard
-          </Link>
+          {/* Logo, versión y theme toggle */}
+          <div className="flex items-center gap-3 justify-center md:justify-start">
+            <Link 
+              href="/" 
+              className="flex items-center gap-3 text-2xl font-bold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              <Image 
+                src="/images/oura-logo.jpg" 
+                alt="Oura Logo" 
+                width={40} 
+                height={40}
+                className="rounded-lg"
+              />
+              <span>Oura Dashboard</span>
+            </Link>
+            <span className="text-sm text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+              v5.10
+            </span>
+            <ThemeToggle />
+          </div>
 
           {/* Links principales (horizontal en desktop, wrappeable) */}
           <div className="flex flex-wrap justify-center gap-3 md:gap-6">
@@ -44,8 +61,8 @@ export function Navigation() {
                     'flex items-center gap-2 px-3 py-2 rounded-lg transition-colors',
                     'min-h-[44px]',
                     isActive
-                      ? 'bg-blue-100 text-blue-700 font-semibold'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-semibold'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
                   )}
                   aria-current={isActive ? 'page' : undefined}
                 >
@@ -53,7 +70,7 @@ export function Navigation() {
                     className="h-5 w-5" 
                     aria-hidden="true"
                   />
-                  <span className="text-base">{link.label}</span>
+                  <span className="text-base">{t(link.labelKey)}</span>
                 </Link>
               );
             })}

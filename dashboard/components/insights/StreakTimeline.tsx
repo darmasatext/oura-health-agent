@@ -1,6 +1,7 @@
 'use client';
 
 import { Flame } from 'lucide-react';
+import { useLanguage } from '@/lib/language-context';
 
 interface StreakTimelineProps {
   streaks: Array<{
@@ -25,6 +26,8 @@ function getStreakTextColor(current: number): string {
 }
 
 export function StreakTimeline({ streaks }: StreakTimelineProps) {
+  const { t } = useLanguage();
+  
   return (
     <div className="space-y-6">
       {streaks.map((streak) => {
@@ -46,11 +49,11 @@ export function StreakTimeline({ streaks }: StreakTimelineProps) {
                 </span>
               </div>
               <div className="text-right">
-                <div className="text-lg font-bold">
-                  {streak.current_streak} días
+                <div className="text-lg font-bold dark:text-gray-100">
+                  {streak.current_streak} {t('common.days')}
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Récord: {streak.max_streak} días
+                <div className="text-xs text-muted-foreground dark:text-gray-400">
+                  {t('insights.record')}: {streak.max_streak} {t('common.days')}
                 </div>
               </div>
             </div>

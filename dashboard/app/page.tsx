@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { saveDateRange, loadDateRange, getDefaultDates, parseLocalDate } from '@/lib/date-storage';
 import { MetricCardEnhanced } from '@/components/dashboard/MetricCardEnhanced';
 import { DateSelector } from '@/components/dashboard/DateSelector';
 import { HRVAlertWidget } from '@/components/dashboard/HRVAlertWidget';
@@ -10,7 +10,8 @@ import { SleepScorecardWidget } from '@/components/dashboard/SleepScorecardWidge
 import { Card } from '@/components/ui/card';
 import { Moon, Heart, Activity, Lightbulb, TrendingUp } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es, enUS } from 'date-fns/locale';
+import { useLanguage } from '@/lib/language-context';
 
 // Calcula el número exacto de días entre dos fechas
 function calculateDays(startDate: Date, endDate: Date): number {
@@ -50,113 +51,101 @@ function getStatus(value: number, threshold: { good: number; warning: number }):
   return 'attention';
 }
 
-function getDateRangeLabel(startDate: Date, endDate: Date): string {
+function getDateRangeLabel(startDate: Date, endDate: Date, t: (key: string, params?: any) => string, locale: any, language: 'es' | 'en'): string {
   const days = differenceInDays(endDate, startDate) + 1;
   
   if (days === 1) {
     // Mostrar la fecha específica
-    return format(startDate, "d 'de' MMMM", { locale: es });
+    const dateFormat = language === 'es' ? "d 'de' MMMM" : "MMMM d";
+    return format(startDate, dateFormat, { locale });
   } else if (days === 7) {
-    return 'Últimos 7 días';
+    return t('home.last_7_days');
   } else if (days === 14) {
-    return 'Últimas 2 semanas';
+    return t('home.last_2_weeks');
   } else if (days === 30) {
-    return 'Último mes';
+    return t('home.last_month');
   } else if (days === 90) {
-    return 'Últimos 3 meses';
+    return t('home.last_3_months');
   } else {
-    return `${days} días`;
+    return t('home.days_count', { days });
   }
 }
 
-function getContextText(startDate: Date, endDate: Date): string {
+function getContextText(startDate: Date, endDate: Date, t: (key: string, params?: any) => string, locale: any, language: 'es' | 'en'): string {
   const days = differenceInDays(endDate, startDate) + 1;
   
   if (days === 1) {
     // Mostrar la fecha específica en lugar de "hoy"
-    const dateStr = format(startDate, "d 'de' MMMM", { locale: es });
-    return `Dato del ${dateStr}`;
+    const dateFormat = language === 'es' ? "d 'de' MMMM" : "MMMM d";
+    const dateStr = format(startDate, dateFormat, { locale });
+    return t('home.data_from', { date: dateStr });
   } else if (days === 7) {
-    return 'Promedio últimos 7 días';
+    return t('home.average_last_7');
   } else if (days < 7) {
-    return `Promedio ${days} días`;
+    return t('home.average_days', { days });
   } else if (days === 14) {
-    return 'Promedio 2 semanas';
+    return t('home.average_2_weeks');
   } else if (days < 30) {
     const weeks = Math.round(days / 7);
-    return `Promedio ${weeks} ${weeks === 1 ? 'semana' : 'semanas'}`;
+    return weeks === 1 ? t('home.average_weeks', { weeks }) : t('home.average_weeks_plural', { weeks });
   } else if (days === 30) {
-    return 'Promedio último mes';
+    return t('home.average_last_month');
   } else if (days === 90) {
-    return 'Promedio 3 meses';
+    return t('home.average_3_months');
   } else if (days < 90) {
-    return `Promedio ${days} días`;
+    return t('home.average_days', { days });
   } else {
     const months = Math.round(days / 30);
-    return `Promedio ${months} ${months === 1 ? 'mes' : 'meses'}`;
+    return months === 1 ? t('home.average_months', { months }) : t('home.average_months_plural', { months });
   }
 }
 
-function generateWeeklyInsight(kpis: any, startDate: Date, endDate: Date): string {
+function generateWeeklyInsight(kpis: any, startDate: Date, endDate: Date, t: (key: string, params?: any) => string, locale: any, language: 'es' | 'en'): string {
   const days = differenceInDays(endDate, startDate);
-  const periodLabel = getDateRangeLabel(startDate, endDate);
+  const periodLabel = getDateRangeLabel(startDate, endDate, t, locale, language);
   
   // Gold layer usa *_delta_pct en lugar de *_change
   const sleepChange = kpis.sleep_delta_pct || 0;
   const readinessChange = kpis.readiness_delta_pct || 0;
   
   if (sleepChange > 5) {
-    return `Tu sueño mejoró ${sleepChange.toFixed(0)}% en ${periodLabel.toLowerCase()}. ¡Excelente trabajo!`;
+    return t('home.insight_sleep_improved', { change: sleepChange.toFixed(0), period: periodLabel.toLowerCase() });
   }
   if (readinessChange > 5) {
-    return `Tu nivel de recuperación aumentó ${readinessChange.toFixed(0)}% en ${periodLabel.toLowerCase()}. Tu cuerpo se está adaptando bien.`;
+    return t('home.insight_readiness_improved', { change: readinessChange.toFixed(0), period: periodLabel.toLowerCase() });
   }
   if (kpis.current_sleep >= 85 && kpis.current_readiness >= 85) {
-    return `Tienes una excelente sincronización entre sueño y recuperación en ${periodLabel.toLowerCase()}. ¡Sigue así!`;
+    return t('home.insight_excellent_sync', { period: periodLabel.toLowerCase() });
   }
   if (sleepChange < -5) {
-    return `Tu sueño bajó ${Math.abs(sleepChange).toFixed(0)}% en ${periodLabel.toLowerCase()}. Considera ajustar tu rutina de descanso.`;
+    return t('home.insight_sleep_decreased', { change: Math.abs(sleepChange).toFixed(0), period: periodLabel.toLowerCase() });
   }
-  return `Mantén la constancia en tus rutinas de sueño y actividad (${periodLabel.toLowerCase()}).`;
+  return t('home.insight_maintain', { period: periodLabel.toLowerCase() });
 }
 
 export default function DashboardHome() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { t, language } = useLanguage();
+  const locale = language === 'es' ? es : enUS;
   
-  const getInitialStartDate = () => {
-    const param = searchParams.get('start');
-    if (param) {
-      const date = new Date(param);
-      if (!isNaN(date.getTime())) return date;
+  const getInitialDates = () => {
+    const stored = loadDateRange();
+    if (stored) {
+      return {
+        start: parseLocalDate(stored.start),
+        end: parseLocalDate(stored.end),
+      };
     }
-    const date = new Date();
-    date.setDate(date.getDate() - 7);
-    return date;
+    return getDefaultDates();
   };
   
-  const getInitialEndDate = () => {
-    const param = searchParams.get('end');
-    if (param) {
-      const date = new Date(param);
-      if (!isNaN(date.getTime())) return date;
-    }
-    return new Date();
-  };
+  const initial = getInitialDates();
+  const [startDate, setStartDate] = useState(initial.start);
+  const [endDate, setEndDate] = useState(initial.end);
   
-  const [startDate, setStartDate] = useState(getInitialStartDate);
-  const [endDate, setEndDate] = useState(getInitialEndDate);
-  
+  // Guardar en localStorage cuando cambian las fechas
   useEffect(() => {
-    const start = startDate.toISOString().split('T')[0];
-    const end = endDate.toISOString().split('T')[0];
-    const currentStart = searchParams.get('start');
-    const currentEnd = searchParams.get('end');
-    
-    if (currentStart !== start || currentEnd !== end) {
-      router.replace(`/?start=${start}&end=${end}`, { scroll: false });
-    }
-  }, [startDate, endDate, router, searchParams]);
+    saveDateRange(startDate, endDate);
+  }, [startDate, endDate]);
 
   // Calcular días exactos (sin redondeo)
   const days = calculateDays(startDate, endDate);
@@ -180,7 +169,7 @@ export default function DashboardHome() {
   if (isLoading) {
     return (
       <div className="p-8 max-w-7xl mx-auto">
-        <div className="text-center text-xl">Cargando tus datos...</div>
+        <div className="text-center text-xl">{t('home.loading_data')}</div>
       </div>
     );
   }
@@ -189,7 +178,7 @@ export default function DashboardHome() {
     return (
       <div className="p-8 max-w-7xl mx-auto">
         <div className="text-center text-xl text-red-600">
-          No pudimos cargar tus datos. Intenta de nuevo.
+          {t('home.error_loading')}
         </div>
       </div>
     );
@@ -200,12 +189,12 @@ export default function DashboardHome() {
     return (
       <div className="p-8 max-w-7xl mx-auto">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Sin datos disponibles</h2>
+          <h2 className="text-2xl font-bold mb-4">{t('home.no_data_title')}</h2>
           <p className="text-lg text-gray-600">
-            No hay suficiente histórico para mostrar datos de {days} días.
+            {t('home.no_data_period', { days })}
           </p>
           <p className="text-gray-500 mt-2">
-            {days >= 90 ? 'El período de 90 días estará disponible el 30 de marzo de 2026.' : 'Intenta seleccionar un período más corto.'}
+            {days >= 90 ? t('home.no_data_90_days') : t('home.no_data_try_shorter')}
           </p>
         </div>
       </div>
@@ -228,9 +217,12 @@ export default function DashboardHome() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard de Salud</h1>
+          <h1 className="text-3xl font-bold">{t('home.dashboard_title')}</h1>
           <p className="text-lg text-gray-600 mt-1">
-            {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+            {format(new Date(), 
+              language === 'es' ? "EEEE, d 'de' MMMM 'de' yyyy" : "EEEE, MMMM d, yyyy",
+              { locale }
+            )}
           </p>
         </div>
 
@@ -248,67 +240,67 @@ export default function DashboardHome() {
       {/* KPIs principales (4 métricas) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCardEnhanced
-          title="Calidad de Sueño"
+          title={t('home.sleep_quality')}
           value={sleepScore}
           unit="/100"
           change={kpis.sleep_delta_pct}
           icon={Moon}
           status={getStatus(sleepScore, { good: 80, warning: 60 })}
-          context={getContextText(startDate, endDate)}
+          context={getContextText(startDate, endDate, t, locale, language)}
         />
 
         <MetricCardEnhanced
-          title="Nivel de Recuperación"
+          title={t('home.readiness_level')}
           value={readinessScore}
           unit="/100"
           change={kpis.readiness_delta_pct}
           icon={Heart}
           status={getStatus(readinessScore, { good: 80, warning: 60 })}
-          context={getContextText(startDate, endDate)}
+          context={getContextText(startDate, endDate, t, locale, language)}
         />
 
         <MetricCardEnhanced
-          title="Actividad Física"
+          title={t('home.physical_activity')}
           value={activityScore}
           unit="/100"
           change={kpis.activity_delta_pct}
           icon={Activity}
           status={getStatus(activityScore, { good: 80, warning: 60 })}
-          context={getContextText(startDate, endDate)}
+          context={getContextText(startDate, endDate, t, locale, language)}
         />
 
         <MetricCardEnhanced
-          title="Pasos Diarios"
+          title={t('home.daily_steps')}
           value={steps}
           change={kpis.steps_delta_pct}
           icon={TrendingUp}
           status={getStatus(steps, { good: 8000, warning: 5000 })}
-          context={getContextText(startDate, endDate)}
+          context={getContextText(startDate, endDate, t, locale, language)}
         />
       </div>
 
       {/* Insight destacado */}
-      <Card className="p-6 bg-blue-50 border-2 border-blue-200">
+      <Card className="p-6 bg-blue-50 border-2 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
         <div className="flex items-start gap-4">
-          <Lightbulb className="h-8 w-8 text-blue-600 flex-shrink-0 mt-1" />
+          <Lightbulb className="h-8 w-8 text-blue-600 flex-shrink-0 mt-1 dark:text-blue-400" />
           <div>
-            <h3 className="text-xl font-bold text-blue-900 mb-2">💡 Insight del Período</h3>
-            <p className="text-lg text-blue-800">{generateWeeklyInsight(kpis, startDate, endDate)}</p>
+            <h3 className="text-xl font-bold text-blue-900 mb-2 dark:text-blue-100">{t('home.period_insight')}</h3>
+            <p className="text-lg text-blue-800 dark:text-blue-200">{generateWeeklyInsight(kpis, startDate, endDate, t, locale, language)}</p>
           </div>
         </div>
       </Card>
 
       {/* Health Insights Widgets - Grid 2 columnas */}
-      <div className="border-t-2 border-gray-200 pt-6">
-        <h2 className="text-2xl font-bold mb-4">📊 Insights de Salud</h2>
-        <p className="text-gray-600 mb-6">
-          Análisis de {getDateRangeLabel(startDate, endDate).toLowerCase()} basado en tus métricas biométricas
+      <div className="border-t-2 border-gray-200 pt-6 dark:border-gray-700">
+        <h2 className="text-2xl font-bold mb-4">{t('home.health_insights')}</h2>
+        <p className="text-gray-600 mb-6 dark:text-gray-400">
+          {t('home.insights_based_on', { period: getDateRangeLabel(startDate, endDate, t, locale, language).toLowerCase() })}
         </p>
       </div>
 
       {insightsLoading ? (
         <div className="text-center py-8">
-          <div className="text-lg text-gray-600">Cargando insights de salud...</div>
+          <div className="text-lg text-gray-600 dark:text-gray-400">{t('home.loading_insights')}</div>
         </div>
       ) : (hrv || scorecard) ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -316,7 +308,9 @@ export default function DashboardHome() {
           {hrv && hrv.hrv !== null && hrv.hrv > 0 && (
             <HRVAlertWidget
               hrv={hrv.hrv}
-              date={hrv.calendar_date ? format(new Date(hrv.calendar_date), "d 'de' MMMM", { locale: es }) : undefined}
+              date={hrv.calendar_date ? format(new Date(hrv.calendar_date), 
+                language === 'es' ? "d 'de' MMMM" : "MMMM d", 
+                { locale }) : undefined}
               zone={hrv.hrv_zone}
               recommendation={hrv.recommendation}
             />
@@ -336,7 +330,7 @@ export default function DashboardHome() {
         </div>
       ) : (
         <div className="text-center py-8">
-          <div className="text-lg text-gray-600">No hay datos de insights para este período</div>
+          <div className="text-lg text-gray-600 dark:text-gray-400">{t('home.no_insights_data')}</div>
         </div>
       )}
     </div>

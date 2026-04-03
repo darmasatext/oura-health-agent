@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { saveDateRange, loadDateRange, getDefaultDates, parseLocalDate } from '@/lib/date-storage';
 import { DateSelector } from '@/components/dashboard/DateSelector';
 import { MetricCardEnhanced } from '@/components/dashboard/MetricCardEnhanced';
 import { SleepDurationChart } from '@/components/charts/SleepDurationChart';
@@ -12,6 +12,7 @@ import { SleepBenchmark } from '@/components/sleep/SleepBenchmark';
 import { parseDate } from '@/lib/date-utils';
 import { Card } from '@/components/ui/card';
 import { Moon, Heart, Clock, Bed, Brain } from 'lucide-react';
+import { useLanguage } from '@/lib/language-context';
 
 async function fetchSleepData(days: number = 7, startDate?: Date, endDate?: Date) {
   let url = `/api/sleep?type=recent&days=${days}`;
@@ -49,45 +50,27 @@ function getStatus(value: number, threshold: { good: number; warning: number }):
 }
 
 export default function SleepPageBalanced() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { t, language } = useLanguage();
+  const locale = language === 'es' ? 'es-MX' : 'en-US';
   
-  // Leer fechas de URL params o usar defaults
-  const getInitialStartDate = () => {
-    const param = searchParams.get('start');
-    if (param) {
-      const date = new Date(param);
-      if (!isNaN(date.getTime())) return date;
+  const getInitialDates = () => {
+    const stored = loadDateRange();
+    if (stored) {
+      return {
+        start: parseLocalDate(stored.start),
+        end: parseLocalDate(stored.end),
+      };
     }
-    const date = new Date();
-    date.setDate(date.getDate() - 7);
-    return date;
+    return getDefaultDates();
   };
   
-  const getInitialEndDate = () => {
-    const param = searchParams.get('end');
-    if (param) {
-      const date = new Date(param);
-      if (!isNaN(date.getTime())) return date;
-    }
-    return new Date();
-  };
+  const initial = getInitialDates();
+  const [startDate, setStartDate] = useState(initial.start);
+  const [endDate, setEndDate] = useState(initial.end);
   
-  const [startDate, setStartDate] = useState(getInitialStartDate);
-  const [endDate, setEndDate] = useState(getInitialEndDate);
-  
-  // Actualizar URL cuando cambian las fechas
   useEffect(() => {
-    const start = startDate.toISOString().split('T')[0];
-    const end = endDate.toISOString().split('T')[0];
-    const currentStart = searchParams.get('start');
-    const currentEnd = searchParams.get('end');
-    
-    // Solo actualizar si las fechas cambiaron
-    if (currentStart !== start || currentEnd !== end) {
-      router.replace(`/sleep?start=${start}&end=${end}`, { scroll: false });
-    }
-  }, [startDate, endDate, router, searchParams]);
+    saveDateRange(startDate, endDate);
+  }, [startDate, endDate]);
 
   const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
@@ -104,7 +87,7 @@ export default function SleepPageBalanced() {
   if (loadingData || loadingAvg) {
     return (
       <div className="p-8 max-w-7xl mx-auto">
-        <div className="text-center text-xl">Cargando tus datos de sueño...</div>
+        <div className="text-center text-xl">{t('sleep.loading_data')}</div>
       </div>
     );
   }
@@ -128,7 +111,7 @@ export default function SleepPageBalanced() {
   const sleepScoreData = sleep.slice(0, Math.min(sleep.length, 90)).reverse().map((day: any) => {
     const date = parseDate(day.calendar_date);
     return {
-      label: date ? date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : 'N/A',
+      label: date ? date.toLocaleDateString(locale, { day: 'numeric', month: 'short' }) : 'N/A',
       value: day.sleep_score || 0,
     };
   });
@@ -140,8 +123,8 @@ export default function SleepPageBalanced() {
         <div className="flex items-center gap-4">
           <Moon className="h-10 w-10 text-blue-600" aria-hidden="true" />
           <div>
-            <h1 className="text-3xl font-bold">Análisis de Sueño</h1>
-            <p className="text-lg text-gray-600">Datos detallados de tu descanso</p>
+            <h1 className="text-3xl font-bold">{t('sleep.title')}</h1>
+            <p className="text-lg text-gray-600 dark:text-gray-400">{t('sleep.detailed_data')}</p>
           </div>
         </div>
 
@@ -160,44 +143,44 @@ export default function SleepPageBalanced() {
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2">
             <Moon className="h-6 w-6 text-blue-600" />
-            <h3 className="text-lg font-semibold">Calidad de Sueño</h3>
+            <h3 className="text-lg font-semibold">{t('sleep.quality')}</h3>
           </div>
           <p className="text-4xl font-bold mb-2">{sleepScore}/100</p>
           <p className="text-sm text-gray-600">
-            😴 Cómo de bien dormiste anoche. Ideal: 80+
+            {t('sleep.quality_description')}
           </p>
         </Card>
 
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="h-6 w-6 text-green-600" />
-            <h3 className="text-lg font-semibold">Horas Totales</h3>
+            <h3 className="text-lg font-semibold">{t('sleep.total_hours')}</h3>
           </div>
           <p className="text-4xl font-bold mb-2">{avgTotalHours.toFixed(1)}h</p>
           <p className="text-sm text-gray-600">
-            ⏰ Promedio de tiempo dormido. Recomendado: 7-9 horas
+            {t('sleep.total_hours_description')}
           </p>
         </Card>
 
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2">
             <Bed className="h-6 w-6 text-purple-600" />
-            <h3 className="text-lg font-semibold">Sueño Profundo</h3>
+            <h3 className="text-lg font-semibold">{t('sleep.deep')}</h3>
           </div>
           <p className="text-4xl font-bold mb-2">{avgDeepHours.toFixed(1)}h</p>
           <p className="text-sm text-gray-600">
-            💪 Fase donde tu cuerpo se repara. Ideal: 1-2 horas por noche
+            {t('sleep.deep_description')}
           </p>
         </Card>
 
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2">
             <Brain className="h-6 w-6 text-pink-600" />
-            <h3 className="text-lg font-semibold">Sueño REM (Sueño de Sueños)</h3>
+            <h3 className="text-lg font-semibold">{t('sleep.rem')}</h3>
           </div>
           <p className="text-4xl font-bold mb-2">{avgRemHours.toFixed(1)}h</p>
           <p className="text-sm text-gray-600">
-            💭 Fase donde sueñas y tu cerebro procesa recuerdos. Ideal: 1.5-2 horas
+            {t('sleep.rem_description')}
           </p>
         </Card>
       </div>
@@ -206,7 +189,7 @@ export default function SleepPageBalanced() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Gráfica 1: Calidad de sueño */}
         <Card className="p-6">
-          <h3 className="text-xl font-bold mb-4">Calidad de Sueño</h3>
+          <h3 className="text-xl font-bold mb-4 dark:text-gray-100">{t("sleep.quality")}</h3>
           <SimplifiedBarChart
             data={sleepScoreData}
             threshold={{ good: 80, warning: 60 }}
@@ -214,22 +197,22 @@ export default function SleepPageBalanced() {
             yAxisLabel="Puntos"
           />
           <p className="text-sm text-gray-600 mt-4 text-center">
-            <span style={{color: '#2E7D32', fontWeight: 'bold'}}>● Verde</span>: Excelente (≥80) · <span style={{color: '#eab308', fontWeight: 'bold'}}>● Amarillo</span>: Revisar (60-79) · <span style={{color: '#C62828', fontWeight: 'bold'}}>● Rojo</span>: Atención (&lt;60)
+            <span style={{color: '#2E7D32', fontWeight: 'bold'}}>● </span>{t('sleep.score_legend_green')} · <span style={{color: '#eab308', fontWeight: 'bold'}}>● </span>{t('sleep.score_legend_yellow')} · <span style={{color: '#C62828', fontWeight: 'bold'}}>● </span>{t('sleep.score_legend_red')}
           </p>
           <p className="text-xs text-gray-500 mt-2 text-center">
-            Puntuación basada en tiempo total, eficiencia, restauración y latencia de sueño
+            {t('sleep.score_explanation')}
           </p>
         </Card>
 
         {/* Gráfica 2: Duración (horas por noche) */}
         <Card className="p-6">
-          <h3 className="text-xl font-bold mb-4">Horas de Sueño por Noche</h3>
+          <h3 className="text-xl font-bold mb-4">{t('sleep.hours_per_night')}</h3>
           <SleepDurationChart data={sleep.slice(0, Math.min(sleep.length, 90)).reverse()} />
           <p className="text-sm text-gray-600 mt-4 text-center">
-            🟢 Verde: Óptimo (7-9h) · 🟡 Amarillo: Aceptable (6-7h) · 🔴 Rojo: Insuficiente (&lt;6h)
+            🟢 {t('sleep.legend_green')} · 🟡 {t('sleep.legend_yellow')} · 🔴 {t('sleep.legend_red')}
           </p>
           <p className="text-xs text-gray-500 mt-2 text-center">
-            Las líneas punteadas muestran el rango recomendado de sueño para adultos. Cada barra representa tus horas de sueño en esa noche.
+            {t('sleep.chart_explanation')}
           </p>
         </Card>
       </div>
@@ -237,7 +220,7 @@ export default function SleepPageBalanced() {
       {/* Gráfica 3: Distribución de fases */}
       {sleep.length > 0 && sleep[0].deep_sleep_duration !== undefined && (
         <Card className="p-6">
-          <h3 className="text-xl font-bold mb-4">Distribución de Fases de Sueño</h3>
+          <h3 className="text-xl font-bold mb-4">{t('sleep.distribution')}</h3>
           <SleepPhasesChart data={sleep.slice(0, Math.min(sleep.length, 90)).reverse()} />
         </Card>
       )}
@@ -245,12 +228,12 @@ export default function SleepPageBalanced() {
       {/* Consejo contextual */}
       {sleepScore < 70 && (
         <Card className="p-6 bg-yellow-50 border-2 border-yellow-400">
-          <h3 className="text-xl font-bold text-yellow-900 mb-3">💡 Consejos para Mejorar</h3>
+          <h3 className="text-xl font-bold text-yellow-900 mb-3">{t('sleep.tips_title')}</h3>
           <ul className="text-base text-yellow-800 space-y-2">
-            <li>• Intenta acostarte 30 minutos más temprano</li>
-            <li>• Evita pantallas 1 hora antes de dormir</li>
-            <li>• Mantén tu habitación fresca (18-20°C)</li>
-            <li>• No tomes café después de las 4 PM</li>
+            <li>• {t('sleep.tip_1')}</li>
+            <li>• {t('sleep.tip_2')}</li>
+            <li>• {t('sleep.tip_3')}</li>
+            <li>• {t('sleep.tip_4')}</li>
           </ul>
         </Card>
       )}

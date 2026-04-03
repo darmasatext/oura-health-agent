@@ -1,6 +1,7 @@
 'use client';
 
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { useTheme } from '@/lib/theme-context';
 
 interface ComparisonRadarChartProps {
   data: Array<{
@@ -12,6 +13,12 @@ interface ComparisonRadarChartProps {
 }
 
 export function ComparisonRadarChart({ data }: ComparisonRadarChartProps) {
+  const { theme } = useTheme();
+  
+  // Colores dinámicos para dark mode
+  const textColor = theme === 'dark' ? '#D1D5DB' : '#374151';
+  const gridColor = theme === 'dark' ? '#4B5563' : '#d1d5db';
+  
   // Normalizar datos a escala 0-100 para el radar
   const normalizeValue = (value: number, unit: string, metric: string): number => {
     // Definir rangos máximos por métrica (ajustados para mejor visualización)
@@ -37,18 +44,43 @@ export function ComparisonRadarChart({ data }: ComparisonRadarChartProps) {
     'Semana Anterior': normalizeValue(item.previous_value, item.unit, item.metric),
   }));
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div 
+          style={{
+            backgroundColor: theme === 'dark' ? '#1F2937' : '#FFFFFF',
+            border: `1px solid ${theme === 'dark' ? '#4B5563' : '#E5E7EB'}`,
+            borderRadius: '8px',
+            padding: '10px',
+            fontSize: '14px',
+            color: textColor
+          }}
+        >
+          <p style={{ fontWeight: 600, marginBottom: '8px', color: textColor }}>{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color, margin: '4px 0' }}>
+              {entry.name}: {entry.value.toFixed(1)}%
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <ResponsiveContainer width="100%" height={400}>
       <RadarChart data={radarData}>
-        <PolarGrid stroke="#d1d5db" />
+        <PolarGrid stroke={gridColor} />
         <PolarAngleAxis 
           dataKey="metric" 
-          tick={{ fontSize: 13, fontWeight: 500, fill: '#374151' }}
+          tick={{ fontSize: 13, fontWeight: 500, fill: textColor }}
         />
         <PolarRadiusAxis 
           angle={90} 
           domain={[0, 100]}
-          tick={{ fontSize: 12 }}
+          tick={{ fontSize: 12, fill: textColor }}
         />
         <Radar
           name="Esta Semana"
@@ -69,10 +101,7 @@ export function ComparisonRadarChart({ data }: ComparisonRadarChartProps) {
         <Legend 
           wrapperStyle={{ fontSize: '14px', fontWeight: 600 }}
         />
-        <Tooltip 
-          formatter={(value: any) => `${value.toFixed(1)}%`}
-          contentStyle={{ fontSize: 14 }}
-        />
+        <Tooltip content={<CustomTooltip />} />
       </RadarChart>
     </ResponsiveContainer>
   );

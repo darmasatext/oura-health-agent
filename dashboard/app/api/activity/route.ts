@@ -7,10 +7,21 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'recent';
     const days = parseInt(searchParams.get('days') || '7');
+    const start = searchParams.get('start');
+    const end = searchParams.get('end');
 
     if (type === 'recent') {
-      const endDate = format(new Date(), 'yyyy-MM-dd');
-      const startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+      // Usar fechas del parámetro si están disponibles, sino calcular desde hoy
+      let endDate: string;
+      let startDate: string;
+      
+      if (start && end) {
+        startDate = start;
+        endDate = end;
+      } else {
+        endDate = format(new Date(), 'yyyy-MM-dd');
+        startDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
+      }
       
       const data = await getActivityData(startDate, endDate);
       

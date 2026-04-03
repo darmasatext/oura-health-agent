@@ -12,9 +12,9 @@ export const ACCESSIBLE_COLORS = {
   },
   warning: {
     bg: '#FFF9C4',      // Amarillo muy claro
-    border: '#F57F17',  // Amarillo oscuro
-    text: '#F57F17',
-    iconColor: '#F57F17',
+    border: '#eab308',  // Amarillo puro (homologado con SleepDurationChart)
+    text: '#eab308',
+    iconColor: '#eab308',
   },
   attention: {
     bg: '#FFEBEE',      // Rojo muy claro

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { saveDateRange, loadDateRange, getDefaultDates, parseLocalDate } from '@/lib/date-storage';
 import { DateSelector } from '@/components/dashboard/DateSelector';
 import { MetricCardEnhanced } from '@/components/dashboard/MetricCardEnhanced';
 import { SimplifiedBarChart } from '@/components/charts/SimplifiedBarChart';
@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Heart, Activity, Thermometer, Zap } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { parseDate } from '@/lib/date-utils';
+import { useLanguage } from '@/lib/language-context';
 
 async function fetchRecoveryData(days: number = 7, startDate?: Date, endDate?: Date) {
   let url = `/api/recovery?type=recent&days=${days}`;
@@ -48,44 +49,27 @@ function getStatus(value: number, threshold: { good: number; warning: number }):
 }
 
 export default function RecoveryPageBalanced() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { t, language } = useLanguage();
+  const locale = language === 'es' ? 'es-MX' : 'en-US';
   
-  // Leer fechas de URL params o usar defaults
-  const getInitialStartDate = () => {
-    const param = searchParams.get('start');
-    if (param) {
-      const date = new Date(param);
-      if (!isNaN(date.getTime())) return date;
+  const getInitialDates = () => {
+    const stored = loadDateRange();
+    if (stored) {
+      return {
+        start: parseLocalDate(stored.start),
+        end: parseLocalDate(stored.end),
+      };
     }
-    const date = new Date();
-    date.setDate(date.getDate() - 7);
-    return date;
+    return getDefaultDates();
   };
   
-  const getInitialEndDate = () => {
-    const param = searchParams.get('end');
-    if (param) {
-      const date = new Date(param);
-      if (!isNaN(date.getTime())) return date;
-    }
-    return new Date();
-  };
+  const initial = getInitialDates();
+  const [startDate, setStartDate] = useState(initial.start);
+  const [endDate, setEndDate] = useState(initial.end);
   
-  const [startDate, setStartDate] = useState(getInitialStartDate);
-  const [endDate, setEndDate] = useState(getInitialEndDate);
-  
-  // Actualizar URL cuando cambian las fechas
   useEffect(() => {
-    const start = startDate.toISOString().split('T')[0];
-    const end = endDate.toISOString().split('T')[0];
-    const currentStart = searchParams.get('start');
-    const currentEnd = searchParams.get('end');
-    
-    if (currentStart !== start || currentEnd !== end) {
-      router.replace(`/recovery?start=${start}&end=${end}`, { scroll: false });
-    }
-  }, [startDate, endDate, router, searchParams]);
+    saveDateRange(startDate, endDate);
+  }, [startDate, endDate]);
 
   const daysDiff = differenceInDays(endDate, startDate) + 1;
 
@@ -102,7 +86,7 @@ export default function RecoveryPageBalanced() {
   if (loadingData || loadingAvg) {
     return (
       <div className="p-8 max-w-7xl mx-auto">
-        <div className="text-center text-xl">Cargando tus datos de recuperación...</div>
+        <div className="text-center text-xl">{t('recovery.loading')}</div>
       </div>
     );
   }
@@ -126,7 +110,7 @@ export default function RecoveryPageBalanced() {
   const readinessChartData = recovery.slice(0, Math.min(recovery.length, 90)).reverse().map((day: any) => {
     const date = parseDate(day.calendar_date);
     return {
-      label: date ? date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : 'N/A',
+      label: date ? date.toLocaleDateString(locale, { day: 'numeric', month: 'short' }) : 'N/A',
       value: day.readiness_score || 0,
     };
   });
@@ -138,8 +122,8 @@ export default function RecoveryPageBalanced() {
         <div className="flex items-center gap-4">
           <Heart className="h-10 w-10 text-red-600" aria-hidden="true" />
           <div>
-            <h1 className="text-3xl font-bold">Análisis de Recuperación</h1>
-            <p className="text-lg text-gray-600">Qué tan listo está tu cuerpo</p>
+            <h1 className="text-3xl font-bold">{t('recovery.analysis')}</h1>
+            <p className="text-lg text-gray-600">{t('recovery.subtitle')}</p>
           </div>
         </div>
 
@@ -158,58 +142,58 @@ export default function RecoveryPageBalanced() {
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Heart className="h-6 w-6 text-red-600" />
-            <h3 className="text-lg font-semibold">Nivel de Recuperación</h3>
+            <h3 className="text-lg font-semibold">{t('recovery.readiness_score')}</h3>
           </div>
           <p className="text-4xl font-bold mb-2">{avgReadiness.toFixed(0)}/100</p>
           <p className="text-sm text-gray-600 mb-1">
-            {avgReadiness >= 80 ? '✅ Listo para el día' : avgReadiness >= 60 ? '⚠️ Tómalo con calma' : '🛑 Descansa hoy'}
+            {avgReadiness >= 80 ? `✅ ${t('recovery.ready_for_day')}` : avgReadiness >= 60 ? `⚠️ ${t('recovery.take_it_easy')}` : `🛑 ${t('recovery.rest_today')}`}
           </p>
           <p className="text-xs text-gray-500 mt-2">
-            Combina sueño, actividad, HRV y temperatura para medir qué tan recuperado está tu cuerpo.
+            {t('recovery.readiness_description')}
           </p>
         </Card>
 
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Activity className="h-6 w-6 text-blue-600" />
-            <h3 className="text-lg font-semibold">Ritmo Cardíaco en Reposo</h3>
+            <h3 className="text-lg font-semibold">{t('recovery.resting_hr')}</h3>
           </div>
-          <p className="text-4xl font-bold mb-2">{avgRestingHR.toFixed(0)} bpm</p>
+          <p className="text-4xl font-bold mb-2">{avgRestingHR.toFixed(0)} {t('recovery.bpm_short')}</p>
           <p className="text-sm text-gray-600 mb-1">
-            ❤️ Ideal: 40-60 bpm para adultos activos
+            ❤️ {t('recovery.resting_hr_ideal')}
           </p>
           <p className="text-xs text-gray-500 mt-2">
-            Frecuencia cardíaca más baja durante el sueño. Valores más bajos indican mejor condición cardiovascular.
+            {t('recovery.resting_hr_description')}
           </p>
         </Card>
 
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Zap className="h-6 w-6 text-yellow-600" />
-            <h3 className="text-lg font-semibold">Variabilidad Cardíaca</h3>
+            <h3 className="text-lg font-semibold">{t('recovery.heart_rate_variability')}</h3>
           </div>
-          <p className="text-4xl font-bold mb-2">{avgHRAvg.toFixed(1)} bpm</p>
+          <p className="text-4xl font-bold mb-2">{avgHRAvg.toFixed(1)} {t('recovery.bpm_short')}</p>
           <p className="text-sm text-gray-600 mb-1">
-            💓 Promedio durante el período
+            💓 {t('recovery.hrv_average')}
           </p>
           <p className="text-xs text-gray-500 mt-2">
-            Frecuencia cardíaca promedio en reposo. Disminuye con mejor forma física y recuperación adecuada.
+            {t('recovery.hrv_description')}
           </p>
         </Card>
 
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Thermometer className="h-6 w-6 text-orange-600" />
-            <h3 className="text-lg font-semibold">Cambios en Temperatura Corporal</h3>
+            <h3 className="text-lg font-semibold">{t('recovery.temperature_changes')}</h3>
           </div>
           <p className="text-4xl font-bold mb-2">
             {avgTemp > 0 ? '+' : ''}{avgTemp.toFixed(2)}°C
           </p>
           <p className="text-sm text-gray-600 mb-1">
-            🌡️ Normal: -0.5 a +0.5°C
+            🌡️ {t('recovery.temp_normal_range')}
           </p>
           <p className="text-xs text-gray-500 mt-2">
-            Diferencia vs tu temperatura basal. Aumentos pueden indicar enfermedad, estrés o menstruación.
+            {t('recovery.temp_description')}
           </p>
         </Card>
       </div>
@@ -218,43 +202,41 @@ export default function RecoveryPageBalanced() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Gráfica 1: Nivel de recuperación */}
         <Card className="p-6">
-          <h3 className="text-xl font-bold mb-4">Nivel de Recuperación</h3>
+          <h3 className="text-xl font-bold mb-4">{t('recovery.readiness_chart_title')}</h3>
           {recovery.length > 0 && <ReadinessChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
           <p className="text-xs text-gray-500 mt-4 text-center">
-            Mide qué tan preparado está tu cuerpo para actividad física intensa
+            {t('recovery.readiness_chart_description')}
           </p>
         </Card>
 
         {/* Gráfica 2: Frecuencia cardíaca en reposo */}
         <Card className="p-6">
-          <h3 className="text-xl font-bold mb-4">Frecuencia Cardíaca en Reposo</h3>
+          <h3 className="text-xl font-bold mb-4">{t('recovery.hr_chart_title')}</h3>
           {recovery.length > 0 && <HRVChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
           <p className="text-xs text-gray-500 mt-4 text-center">
-            Menor frecuencia cardíaca en reposo = mejor condición cardiovascular
+            {t('recovery.hr_chart_description')}
           </p>
         </Card>
       </div>
 
       {/* Gráfica de tendencia de readiness */}
       <Card className="p-6">
-        <h3 className="text-xl font-bold mb-4">Tendencia de Recuperación</h3>
+        <h3 className="text-xl font-bold mb-4">{t('recovery.trend_title')}</h3>
         <SimplifiedBarChart
           data={readinessChartData}
           threshold={{ good: 80, warning: 60 }}
           title=""
-          yAxisLabel="Puntos"
+          yAxisLabel={t('recovery.points')}
         />
         <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
           <p className="text-sm text-gray-700">
-            <strong>💡 Cómo interpretar:</strong> El nivel de recuperación combina calidad de sueño, 
-            variabilidad cardíaca (HRV), temperatura corporal y actividad reciente para calcular 
-            qué tan preparado está tu cuerpo para el estrés físico y mental del día.
+            <strong>💡 {t('recovery.how_to_interpret')}</strong> {t('recovery.interpretation_text')}
           </p>
           <ul className="text-sm text-gray-600 mt-3 space-y-1 ml-4">
-            <li>• <strong>≥85:</strong> Óptimo - Puedes entrenar intenso</li>
-            <li>• <strong>70-84:</strong> Bueno - Entrenamiento moderado</li>
-            <li>• <strong>60-69:</strong> Aceptable - Actividad ligera</li>
-            <li>• <strong>&lt;60:</strong> Bajo - Prioriza descanso y recuperación</li>
+            <li>• <strong>≥85:</strong> {t('recovery.optimal_range')}</li>
+            <li>• <strong>70-84:</strong> {t('recovery.good_training')}</li>
+            <li>• <strong>60-69:</strong> {t('recovery.acceptable_range')}</li>
+            <li>• <strong>&lt;60:</strong> {t('recovery.low_range')}</li>
           </ul>
         </div>
       </Card>
@@ -262,27 +244,27 @@ export default function RecoveryPageBalanced() {
       {/* Recomendaciones contextuales */}
       <Card className="p-6 bg-blue-50 border-2 border-blue-400">
         <h3 className="text-xl font-bold text-blue-900 mb-3">
-          {readinessScore >= 80 ? '✨ Qué hacer hoy' : '💡 Consejos para recuperarte'}
+          {readinessScore >= 80 ? `✨ ${t('recovery.recommendations_title')}` : `💡 ${t('recovery.recovery_tips_title')}`}
         </h3>
 
         {readinessScore >= 80 ? (
           <ul className="text-base text-blue-800 space-y-2">
-            <li>• Tu cuerpo está listo - aprovecha para hacer ejercicio</li>
-            <li>• Mantén tu rutina de sueño para mañana</li>
-            <li>• Mantente hidratado durante el día</li>
+            <li>• {t('recovery.rec_ready_1')}</li>
+            <li>• {t('recovery.rec_ready_2')}</li>
+            <li>• {t('recovery.rec_ready_3')}</li>
           </ul>
         ) : readinessScore >= 60 ? (
           <ul className="text-base text-blue-800 space-y-2">
-            <li>• Haz actividad moderada - nada muy intenso</li>
-            <li>• Duerme temprano esta noche</li>
-            <li>• Toma descansos cortos durante el día</li>
+            <li>• {t('recovery.rec_moderate_1')}</li>
+            <li>• {t('recovery.rec_moderate_2')}</li>
+            <li>• {t('recovery.rec_moderate_3')}</li>
           </ul>
         ) : (
           <ul className="text-base text-blue-800 space-y-2">
-            <li>• Tu cuerpo necesita descansar - evita ejercicio intenso</li>
-            <li>• Acuéstate 1 hora más temprano hoy</li>
-            <li>• Toma siestas de 20 minutos si puedes</li>
-            <li>• Bebe mucha agua y come ligero</li>
+            <li>• {t('recovery.rec_low_1')}</li>
+            <li>• {t('recovery.rec_low_2')}</li>
+            <li>• {t('recovery.rec_low_3')}</li>
+            <li>• {t('recovery.rec_low_4')}</li>
           </ul>
         )}
       </Card>
