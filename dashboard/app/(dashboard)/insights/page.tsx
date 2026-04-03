@@ -42,7 +42,7 @@ const StreakTimeline = dynamic(
 // Fetch functions con medición de performance
 async function fetchWeekdayAnalysis(userSlug: string) {
   const start = performance.now();
-  const res = await fetch('/api/insights?type=weekday');
+  const res = await fetch(`/api/insights?type=weekday&user=${userSlug}`);
   if (!res.ok) throw new Error('Failed to fetch weekday analysis');
   const data = await res.json();
   console.log(`fetchWeekdayAnalysis: ${(performance.now() - start).toFixed(0)}ms`);
@@ -51,7 +51,7 @@ async function fetchWeekdayAnalysis(userSlug: string) {
 
 async function fetchCorrelations(userSlug: string) {
   const start = performance.now();
-  const res = await fetch('/api/insights?type=correlations');
+  const res = await fetch(`/api/insights?type=correlations&user=${userSlug}`);
   if (!res.ok) throw new Error('Failed to fetch correlations');
   const data = await res.json();
   console.log(`fetchCorrelations: ${(performance.now() - start).toFixed(0)}ms`);
@@ -60,7 +60,7 @@ async function fetchCorrelations(userSlug: string) {
 
 async function fetchStreaks(userSlug: string) {
   const start = performance.now();
-  const res = await fetch('/api/insights?type=streaks');
+  const res = await fetch(`/api/insights?type=streaks&user=${userSlug}`);
   if (!res.ok) throw new Error('Failed to fetch streaks');
   const data = await res.json();
   console.log(`fetchStreaks: ${(performance.now() - start).toFixed(0)}ms`);
@@ -69,17 +69,17 @@ async function fetchStreaks(userSlug: string) {
 
 async function fetchSuperDays(userSlug: string) {
   const start = performance.now();
-  const res = await fetch('/api/insights?type=superdays');
+  const res = await fetch(`/api/insights?type=superdays&user=${userSlug}`);
   if (!res.ok) throw new Error('Failed to fetch super days');
   const data = await res.json();
   console.log(`fetchSuperDays: ${(performance.now() - start).toFixed(0)}ms`);
   return data;
 }
 
-async function fetchHealthInsights() {
+async function fetchHealthInsights(userSlug: string) {
   const start = performance.now();
   // Usar Gold layer endpoints
-  const res = await fetch('/api/health-insights?type=all&days=7');
+  const res = await fetch(`/api/health-insights?type=all&days=7&user=${userSlug}`);
   if (!res.ok) throw new Error('Failed to fetch health insights');
   const data = await res.json();
   console.log(`fetchHealthInsights: ${(performance.now() - start).toFixed(0)}ms`);
@@ -152,8 +152,8 @@ export default function InsightsPage() {
   });
 
   const { data: healthInsightsData, isLoading: healthInsightsLoading } = useQuery({
-    queryKey: ['health-insights-insights-page'],
-    queryFn: fetchHealthInsights,
+    queryKey: ['health-insights-insights-page', currentUser.slug],
+    queryFn: () => fetchHealthInsights(currentUser.slug),
     staleTime: 5 * 60 * 1000,  // 5 minutos
     gcTime: 15 * 60 * 1000,    // 15 minutos
   });

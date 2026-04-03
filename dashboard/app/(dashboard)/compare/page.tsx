@@ -65,8 +65,8 @@ export default function ComparePage() {
 
   // Generar insight automático
   const generateInsight = () => {
-    const improvements = comparisons.filter((c: any) => c.change_pct > 5).length;
-    const declines = comparisons.filter((c: any) => c.change_pct < -5).length;
+    const improvements = comparisons.filter((c: any) => c.change_pct !== null && c.change_pct > 5).length;
+    const declines = comparisons.filter((c: any) => c.change_pct !== null && c.change_pct < -5).length;
 
     if (improvements > declines) {
       return t('compare.insight_great_week').replace('{improvements}', improvements.toString());
@@ -137,7 +137,7 @@ export default function ComparePage() {
             {/* Top Improvement */}
             {(() => {
               const topImprovement = comparisons
-                .filter((c: any) => c.change_pct > 0)
+                .filter((c: any) => c.change_pct !== null && c.change_pct > 0)
                 .sort((a: any, b: any) => b.change_pct - a.change_pct)[0];
               
               if (topImprovement) {
@@ -148,7 +148,7 @@ export default function ComparePage() {
                     </div>
                     <div className="font-bold dark:text-gray-100">{translateMetric(topImprovement.metric)}</div>
                     <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      +{topImprovement.change_pct.toFixed(1)}%
+                      +{topImprovement.change_pct !== null ? topImprovement.change_pct.toFixed(1) : '0.0'}%
                     </div>
                   </div>
                 );
@@ -158,7 +158,7 @@ export default function ComparePage() {
             {/* Top Decline */}
             {(() => {
               const topDecline = comparisons
-                .filter((c: any) => c.change_pct < 0)
+                .filter((c: any) => c.change_pct !== null && c.change_pct < 0)
                 .sort((a: any, b: any) => a.change_pct - b.change_pct)[0];
               
               if (topDecline) {
@@ -169,7 +169,7 @@ export default function ComparePage() {
                     </div>
                     <div className="font-bold dark:text-gray-100">{translateMetric(topDecline.metric)}</div>
                     <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                      {topDecline.change_pct.toFixed(1)}%
+                      {topDecline.change_pct !== null ? topDecline.change_pct.toFixed(1) : '0.0'}%
                     </div>
                   </div>
                 );
@@ -185,13 +185,13 @@ export default function ComparePage() {
                 <div>
                   <div className="text-gray-500 dark:text-gray-400">{t('compare.improved')}</div>
                   <div className="font-bold text-green-600 dark:text-green-400">
-                    {comparisons.filter((c: any) => c.change_pct > 0).length}
+                    {comparisons.filter((c: any) => c.change_pct !== null && c.change_pct > 0).length}
                   </div>
                 </div>
                 <div>
                   <div className="text-gray-500 dark:text-gray-400">{t('compare.declined')}</div>
                   <div className="font-bold text-red-600 dark:text-red-400">
-                    {comparisons.filter((c: any) => c.change_pct < 0).length}
+                    {comparisons.filter((c: any) => c.change_pct !== null && c.change_pct < 0).length}
                   </div>
                 </div>
               </div>

@@ -43,7 +43,7 @@ export default function SleepPageAccessible() {
   const avg = averages?.data || {};
 
   // Datos más recientes
-  const latest = sleep[0] || {};
+  const latest = sleep[sleep.length - 1] || {};
   const sleepScore = latest.sleep_score || 0;
   const totalSleep = latest.total_sleep_hours || 0;
   const deepSleep = latest.deep_sleep_minutes || 0;

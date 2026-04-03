@@ -34,7 +34,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         if (user) return user;
       }
     }
-    return USERS[0]; // Default: Fer
+    return USERS[1]; // Default: Amparo (índice 1)
   });
 
   // NO necesitamos useEffect porque ya cargamos sincrónicamente arriba

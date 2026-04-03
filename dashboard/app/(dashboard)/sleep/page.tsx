@@ -106,8 +106,8 @@ export default function SleepPageBalanced() {
   const sleep = sleepData?.data || [];
   const avg = averages?.data || {};
 
-  // Datos más recientes
-  const latest = sleep[0] || {};
+  // Datos más recientes (último elemento del array ordenado ASC)
+  const latest = sleep[sleep.length - 1] || {};
   const sleepScore = latest.sleep_score || 0;
   const totalSleep = latest.total_hours || 0;
   const deepSleep = latest.deep_sleep_min || 0;
@@ -119,10 +119,11 @@ export default function SleepPageBalanced() {
   const avgRemHours = avg.avg_rem_hours || 0;
 
   // Preparar datos para gráficas (hasta 90 días)
-  const sleepScoreData = sleep.slice(0, Math.min(sleep.length, 90)).reverse().map((day: any) => {
+  const sleepScoreData = sleep.slice(0, Math.min(sleep.length, 90)).map((day: any) => {
     const date = parseDate(day.calendar_date);
+    const label = date ? date.toLocaleDateString(locale, { day: 'numeric', month: 'short' }) : 'N/A';
     return {
-      label: date ? date.toLocaleDateString(locale, { day: 'numeric', month: 'short' }) : 'N/A',
+      label,
       value: day.sleep_score || 0,
     };
   });

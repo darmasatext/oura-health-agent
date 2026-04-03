@@ -24,6 +24,11 @@ async function fetchActivityData(days: number = 7, startDate?: Date, endDate?: D
     url += `&start=${start}&end=${end}`;
   }
   
+  // Agregar parámetro user para multi-usuario
+  if (userSlug) {
+    url += `&user=${userSlug}`;
+  }
+  
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch');
   return res.json();
@@ -69,7 +74,7 @@ export default function ActivityPageAccessible() {
   }
 
   const activity = activityData?.data || [];
-  const latest = activity[0] || {};
+  const latest = activity[activity.length - 1] || {}; // Último elemento (más reciente)
   
   // Dividir en período actual y período anterior para comparación
   const halfLength = Math.floor(activity.length / 2);

@@ -97,7 +97,7 @@ export default function RecoveryPageBalanced() {
 
   const recovery = recoveryData?.data || [];
   const averages = averagesData?.data || {};
-  const latest = recovery[0] || {};
+  const latest = recovery[recovery.length - 1] || {}; // Último elemento (más reciente)
 
   const readinessScore = latest.readiness_score || 0;
   const restingHR = latest.lowest_heart_rate || 0;

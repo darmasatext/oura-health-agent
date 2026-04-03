@@ -4,9 +4,9 @@ import { useLanguage } from '@/lib/language-context';
 
 interface ComparisonCardProps {
   metric: string;
-  currentValue: number;
-  previousValue: number;
-  changePct: number;
+  currentValue: number | null;
+  previousValue: number | null;
+  changePct: number | null;
   unit?: string;
 }
 
@@ -48,8 +48,8 @@ export function ComparisonCard({
     return unitMap[unitStr] || unitStr;
   };
   
-  const isPositive = changePct > 0;
-  const isNeutral = Math.abs(changePct) < 1;
+  const isPositive = changePct !== null && changePct > 0;
+  const isNeutral = changePct === null || Math.abs(changePct) < 1;
   
   const changeColor = isNeutral 
     ? 'text-gray-600 dark:text-gray-400' 
@@ -60,7 +60,8 @@ export function ComparisonCard({
   const Icon = isNeutral ? Minus : isPositive ? ArrowUp : ArrowDown;
 
   // Formatear números grandes con separador de miles
-  const formatNumber = (val: number) => {
+  const formatNumber = (val: number | null) => {
+    if (val === null) return '-';
     if (unit === 'pasos' || unit === 'steps' || val > 1000) {
       return val.toLocaleString(locale);
     }
@@ -89,10 +90,10 @@ export function ComparisonCard({
       <div className={`flex items-center gap-2 ${changeColor}`}>
         <Icon className="h-5 w-5" />
         <span className="font-semibold">
-          {changePct > 0 ? '+' : ''}{changePct.toFixed(1)}%
+          {changePct !== null ? `${changePct > 0 ? '+' : ''}${changePct.toFixed(1)}%` : '-'}
         </span>
         <span className="text-sm">
-          {isPositive ? t('compare.improvement') : isNeutral ? t('compare.no_change') : t('compare.decrease')}
+          {changePct === null ? t('compare.no_data') : isPositive ? t('compare.improvement') : isNeutral ? t('compare.no_change') : t('compare.decrease')}
         </span>
       </div>
     </Card>

@@ -29,7 +29,7 @@ export default function RecoveryPageAccessible() {
   }
 
   const recovery = recoveryData?.data || [];
-  const latest = recovery[0] || {};
+  const latest = recovery[recovery.length - 1] || {};
   
   const readinessScore = latest.readiness_score || 0;
   const restingHR = latest.resting_hr || 0;

@@ -28,7 +28,7 @@ export default function ActivityPageAccessible() {
   }
 
   const activity = activityData?.data || [];
-  const latest = activity[0] || {};
+  const latest = activity[activity.length - 1] || {};
   
   const steps = latest.steps || 0;
   const activityScore = latest.activity_score || 0;

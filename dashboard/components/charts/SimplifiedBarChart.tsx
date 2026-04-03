@@ -19,6 +19,15 @@ export function SimplifiedBarChart({
 }: SimplifiedBarChartProps) {
   const { theme } = useTheme();
   
+  // WORKAROUND: Recharts omite el último label cuando hay ≤4 elementos
+  // Agregar elementos dummy invisibles para forzar rendering completo
+  const dummiesNeeded = data.length < 5 ? 3 : 2;
+  const dummies = Array(dummiesNeeded).fill(null).map((_, i) => ({ 
+    label: ' '.repeat(i + 1), 
+    value: 0 
+  }));
+  const dataWithDummy = [...data, ...dummies];
+  
   const getBarColor = (value: number): string => {
     if (value >= threshold.good) return ACCESSIBLE_COLORS.good.border;
     if (value >= threshold.warning) return ACCESSIBLE_COLORS.warning.border;
@@ -36,6 +45,9 @@ export function SimplifiedBarChart({
   const chartDescription = data
     .map(d => `${d.label}: ${d.value}`)
     .join(', ');
+    
+  // Solo mostrar labels cuando hay 14 días o menos (sin contar el dummy)
+  const shouldShowLabelsAdjusted = data.length <= 14;
 
   return (
     <div 
@@ -46,13 +58,20 @@ export function SimplifiedBarChart({
       
       <ResponsiveContainer width="100%" height={300}>
         <BarChart 
-          data={data}
+          data={dataWithDummy}
+          margin={{ top: 20, right: 100, left: 20, bottom: data.length > 10 ? 80 : 20 }}
           aria-label={`Gráfica de barras: ${title}`}
+          barCategoryGap="10%"
         >
           <XAxis 
-            dataKey="label" 
+            dataKey="label"
+            type="category"
+            allowDuplicatedCategory={false}
             tick={{ fontSize: 16, fontWeight: 'bold', fill: textColor }}
             stroke={axisColor}
+            angle={data.length > 10 ? -45 : 0}
+            textAnchor={data.length > 10 ? 'end' : 'middle'}
+            height={data.length > 10 ? 80 : 60}
           />
           <YAxis 
             tick={{ fontSize: 16, fontWeight: 'bold', fill: textColor }}
@@ -68,15 +87,16 @@ export function SimplifiedBarChart({
             dataKey="value" 
             radius={[8, 8, 0, 0]}
             aria-label="Valores de datos"
+            isAnimationActive={false}
           >
-            {data.map((entry, index) => (
+            {dataWithDummy.map((entry, index) => (
               <Cell 
-                key={`cell-${index}`} 
-                fill={getBarColor(entry.value)} 
+                key={`cell-${entry.label}-${index}-${entry.value}`} 
+                fill={entry.label === '' ? 'transparent' : getBarColor(entry.value)} 
               />
             ))}
             {/* VALORES ARRIBA DE BARRAS - Solo si hay ≤14 días */}
-            {shouldShowLabels && (
+            {shouldShowLabelsAdjusted && (
               <LabelList 
                 dataKey="value" 
                 position="top" 
