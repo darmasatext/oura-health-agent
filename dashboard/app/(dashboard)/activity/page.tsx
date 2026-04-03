@@ -1,22 +1,75 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { DateSelector } from '@/components/dashboard/DateSelector';
 import { MetricWithContext } from '@/components/dashboard/MetricWithContext';
 import { SimplifiedBarChart } from '@/components/charts/SimplifiedBarChart';
 import { getActivityMessage } from '@/lib/contextual-messages';
 import { ACCESSIBLE_COLORS, getHealthStatus } from '@/lib/accessibility-colors';
 import { Activity, Footprints, Flame, Target } from 'lucide-react';
+import { differenceInDays } from 'date-fns';
+import { Card } from '@/components/ui/card';
 
-async function fetchActivityData(days: number = 7) {
-  const res = await fetch(`/api/activity?type=recent&days=${days}`);
+async function fetchActivityData(days: number = 7, startDate?: Date, endDate?: Date) {
+  const timestamp = Date.now();
+  let url = `/api/activity?type=recent&days=${days}&_t=${timestamp}`;
+  
+  if (startDate && endDate) {
+    const start = startDate.toISOString().split('T')[0];
+    const end = endDate.toISOString().split('T')[0];
+    url += `&start=${start}&end=${end}`;
+  }
+  
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch');
   return res.json();
 }
 
 export default function ActivityPageAccessible() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const getInitialStartDate = () => {
+    const param = searchParams.get('start');
+    if (param) {
+      const date = new Date(param);
+      if (!isNaN(date.getTime())) return date;
+    }
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    return date;
+  };
+  
+  const getInitialEndDate = () => {
+    const param = searchParams.get('end');
+    if (param) {
+      const date = new Date(param);
+      if (!isNaN(date.getTime())) return date;
+    }
+    return new Date();
+  };
+  
+  const [startDate, setStartDate] = useState(getInitialStartDate);
+  const [endDate, setEndDate] = useState(getInitialEndDate);
+  
+  useEffect(() => {
+    const start = startDate.toISOString().split('T')[0];
+    const end = endDate.toISOString().split('T')[0];
+    const currentStart = searchParams.get('start');
+    const currentEnd = searchParams.get('end');
+    
+    if (currentStart !== start || currentEnd !== end) {
+      router.replace(`/activity?start=${start}&end=${end}`, { scroll: false });
+    }
+  }, [startDate, endDate, router, searchParams]);
+
+  const daysDiff = differenceInDays(endDate, startDate) + 1;
+
   const { data: activityData, isLoading } = useQuery({
-    queryKey: ['activity-data', 7],
-    queryFn: () => fetchActivityData(7),
+    queryKey: ['activity-data', startDate.toISOString(), endDate.toISOString(), daysDiff],
+    queryFn: () => fetchActivityData(daysDiff, startDate, endDate),
   });
 
   if (isLoading) {
@@ -30,29 +83,86 @@ export default function ActivityPageAccessible() {
   const activity = activityData?.data || [];
   const latest = activity[0] || {};
   
-  const steps = latest.steps || 0;
-  const activityScore = latest.activity_score || 0;
-  const activeCalories = latest.active_calories || 0;
-  const metMinutes = latest.met_minutes || 0;
+  // Dividir en período actual y período anterior para comparación
+  const halfLength = Math.floor(activity.length / 2);
+  const currentPeriod = activity.slice(0, halfLength);
+  const previousPeriod = activity.slice(halfLength);
+  
+  // Calcular promedios del período actual
+  const avgSteps = currentPeriod.length > 0 
+    ? Math.round(currentPeriod.reduce((sum: number, day: any) => sum + (day.steps || 0), 0) / currentPeriod.length)
+    : 0;
+  const avgActivityScore = currentPeriod.length > 0
+    ? Math.round(currentPeriod.reduce((sum: number, day: any) => sum + (day.activity_score || 0), 0) / currentPeriod.length)
+    : 0;
+  const avgActiveCalories = currentPeriod.length > 0
+    ? Math.round(currentPeriod.reduce((sum: number, day: any) => sum + (day.active_calories || 0), 0) / currentPeriod.length)
+    : 0;
+  const avgMetMinutes = currentPeriod.length > 0
+    ? Math.round(currentPeriod.reduce((sum: number, day: any) => sum + (day.met_minutes || 0), 0) / currentPeriod.length)
+    : 0;
+
+  // Calcular promedios del período anterior
+  const prevAvgSteps = previousPeriod.length > 0
+    ? Math.round(previousPeriod.reduce((sum: number, day: any) => sum + (day.steps || 0), 0) / previousPeriod.length)
+    : 0;
+  const prevAvgActivityScore = previousPeriod.length > 0
+    ? Math.round(previousPeriod.reduce((sum: number, day: any) => sum + (day.activity_score || 0), 0) / previousPeriod.length)
+    : 0;
+  const prevAvgActiveCalories = previousPeriod.length > 0
+    ? Math.round(previousPeriod.reduce((sum: number, day: any) => sum + (day.active_calories || 0), 0) / previousPeriod.length)
+    : 0;
+  const prevAvgMetMinutes = previousPeriod.length > 0
+    ? Math.round(previousPeriod.reduce((sum: number, day: any) => sum + (day.met_minutes || 0), 0) / previousPeriod.length)
+    : 0;
 
   const stepsGoal = 8000;
-  const activityStatus = getHealthStatus(activityScore, { good: 80, warning: 60 });
+  const activityStatus = getHealthStatus(avgActivityScore, { good: 80, warning: 60 });
 
-  // Preparar datos para gráfica de pasos (últimos 7 días)
-  const chartData = activity.slice(0, 7).reverse().map((day: any) => ({
-    label: new Date(day.calendar_date).toLocaleDateString('es-MX', { weekday: 'short' }),
+  // Datos para gráfica de radar (comparación período actual vs anterior)
+  const radarData = [
+    { metric: 'Nivel de Actividad', current_value: avgActivityScore, previous_value: prevAvgActivityScore, unit: '/100' },
+    { metric: 'Pasos', current_value: avgSteps, previous_value: prevAvgSteps, unit: 'pasos' },
+    { metric: 'Calorías Activas', current_value: avgActiveCalories, previous_value: prevAvgActiveCalories, unit: 'cal' },
+    { metric: 'Minutos Activos', current_value: avgMetMinutes, previous_value: prevAvgMetMinutes, unit: 'min' },
+  ];
+
+  // Debug: Log para verificar datos
+  console.log('Activity page debug:', {
+    activityLength: activity.length,
+    daysDiff,
+    radarDataLength: radarData.length,
+    currentPeriodLength: currentPeriod.length,
+    previousPeriodLength: previousPeriod.length
+  });
+
+  // Preparar datos para gráfica de pasos (dinámico según filtro)
+  const maxDaysForChart = Math.min(activity.length, 90); // Máximo 90 días
+  const chartData = activity.slice(0, maxDaysForChart).reverse().map((day: any) => ({
+    label: new Date(day.calendar_date).toLocaleDateString('es-MX', daysDiff <= 7 ? { weekday: 'short' } : { day: 'numeric', month: 'short' }),
     value: day.steps || 0,
   }));
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Título compacto */}
-      <div className="flex items-center gap-4">
-        <Activity className="h-10 w-10 text-green-600" aria-hidden="true" />
-        <div>
-          <h1 className="text-3xl font-bold">Análisis de Actividad</h1>
-          <p className="text-lg text-gray-600">Qué tan activo estuviste hoy</p>
+      {/* Header con filtros */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <Activity className="h-10 w-10 text-green-600" aria-hidden="true" />
+          <div>
+            <h1 className="text-3xl font-bold">Análisis de Actividad</h1>
+            <p className="text-lg text-gray-600">Datos de tu actividad física</p>
+          </div>
         </div>
+
+        <DateSelector
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(start, end) => {
+            setStartDate(start);
+            setEndDate(end);
+          }}
+        />
       </div>
 
       {/* KPIs compactos en fila */}
@@ -60,9 +170,9 @@ export default function ActivityPageAccessible() {
         <div className="bg-white p-4 rounded-lg border-2 border-gray-300">
           <div className="flex items-center gap-2 mb-1">
             <Footprints className="h-5 w-5 text-blue-600" />
-            <h3 className="text-base font-semibold">Pasos</h3>
+            <h3 className="text-base font-semibold">Pasos (Promedio)</h3>
           </div>
-          <p className="text-3xl font-bold">{steps.toLocaleString('es-MX')}</p>
+          <p className="text-3xl font-bold">{avgSteps.toLocaleString('es-MX')}</p>
           <p className="text-sm text-gray-600">Meta: {stepsGoal.toLocaleString('es-MX')}</p>
         </div>
 
@@ -71,9 +181,9 @@ export default function ActivityPageAccessible() {
             <Target className="h-5 w-5 text-purple-600" />
             <h3 className="text-base font-semibold">Nivel de Actividad</h3>
           </div>
-          <p className="text-3xl font-bold">{activityScore}/100</p>
+          <p className="text-3xl font-bold">{avgActivityScore}/100</p>
           <p className="text-sm text-gray-600">
-            {activityScore >= 80 ? 'Excelente' : activityScore >= 60 ? 'Bueno' : 'Bajo'}
+            {avgActivityScore >= 80 ? 'Excelente' : avgActivityScore >= 60 ? 'Bueno' : 'Bajo'}
           </p>
         </div>
 
@@ -82,8 +192,8 @@ export default function ActivityPageAccessible() {
             <Flame className="h-5 w-5 text-orange-600" />
             <h3 className="text-base font-semibold">Calorías Activas</h3>
           </div>
-          <p className="text-3xl font-bold">{activeCalories.toLocaleString('es-MX')}</p>
-          <p className="text-sm text-gray-600">Quemadas en actividad</p>
+          <p className="text-3xl font-bold">{avgActiveCalories.toLocaleString('es-MX')}</p>
+          <p className="text-sm text-gray-600">Promedio por día</p>
         </div>
 
         <div className="bg-white p-4 rounded-lg border-2 border-gray-300">
@@ -91,77 +201,74 @@ export default function ActivityPageAccessible() {
             <Activity className="h-5 w-5 text-green-600" />
             <h3 className="text-base font-semibold">Minutos Activos</h3>
           </div>
-          <p className="text-3xl font-bold">{metMinutes || 0}</p>
-          <p className="text-sm text-gray-600">Equivalente de ejercicio</p>
+          <p className="text-3xl font-bold">{avgMetMinutes || 0}</p>
+          <p className="text-sm text-gray-600">Promedio por día</p>
         </div>
       </div>
 
-      {/* Gráficas en grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl border-2 border-gray-300">
-          <div className="flex items-center gap-3 mb-3">
-            <Target className="h-10 w-10 text-purple-600" aria-hidden="true" />
-            <h3 className="text-2xl font-bold">Nivel de Actividad</h3>
+      {/* Gráfica de radar - Comparación de actividad */}
+      {activity.length >= 4 && radarData && radarData.length > 0 ? (
+        <Card className="p-6">
+          <h3 className="text-2xl font-bold mb-4">Comparación de Actividad</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Compara tu nivel de actividad de la mitad más reciente del período vs la mitad anterior
+          </p>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {radarData.map((item: any, idx: number) => (
+              <div key={idx} className="bg-gray-50 p-4 rounded-lg border">
+                <h4 className="font-semibold text-sm mb-2">{item.metric}</h4>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-gray-600">Actual</p>
+                    <p className="text-lg font-bold text-blue-600">{item.current_value}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Anterior</p>
+                    <p className="text-lg font-bold text-green-600">{item.previous_value}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{item.unit}</p>
+              </div>
+            ))}
           </div>
-          <p className="text-5xl font-bold text-gray-900 mb-2">
-            {activityScore}
-            <span className="text-3xl text-gray-600 ml-2">/100</span>
-          </p>
-          <p className="text-xl text-gray-700">
-            {activityScore >= 80 ? '¡Excelente! Muy activo' : 
-             activityScore >= 60 ? 'Bien - actividad moderada' : 
-             'Bajo - intenta moverte más'}
-          </p>
-          <p className="text-lg text-gray-600 mt-2 bg-gray-100 p-3 rounded">
-            Promedio de actividad del día
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border-2 border-gray-300">
-          <div className="flex items-center gap-3 mb-3">
-            <Flame className="h-10 w-10 text-orange-600" aria-hidden="true" />
-            <h3 className="text-2xl font-bold">Calorías Quemadas</h3>
+          
+          {/* Explicación de la gráfica */}
+          <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+            <h4 className="font-bold text-blue-900 mb-2">📊 Cómo interpretar estos datos:</h4>
+            <ul className="text-sm text-blue-800 space-y-2">
+              <li>
+                <strong>Actual (azul):</strong> Promedio de la mitad más reciente del período (últimos {Math.floor(activity.length / 2)} días)
+              </li>
+              <li>
+                <strong>Anterior (verde):</strong> Promedio de la mitad anterior del período (primeros {Math.ceil(activity.length / 2)} días)
+              </li>
+              <li>
+                <strong>Valores más altos = mejor:</strong> Si los valores azules son mayores que los verdes, tu actividad está mejorando
+              </li>
+            </ul>
           </div>
-          <p className="text-5xl font-bold text-gray-900 mb-2">
-            {activeCalories.toLocaleString('es-MX')}
-            <span className="text-3xl text-gray-600 ml-2">cal</span>
+        </Card>
+      ) : (
+        <Card className="p-6">
+          <h3 className="text-2xl font-bold mb-4">Comparación de Actividad</h3>
+          <p className="text-gray-600 text-center py-8">
+            Necesitas al menos 4 días de datos para ver la comparación.
+            Actualmente tienes {activity.length} días.
           </p>
-          <p className="text-xl text-gray-700">
-            Energía gastada en actividad
-          </p>
-          <p className="text-lg text-gray-600 mt-2 bg-gray-100 p-3 rounded">
-            Solo actividad - sin contar reposo
-          </p>
-        </div>
+        </Card>
+      )}
 
-        <div className="bg-white p-6 rounded-xl border-2 border-gray-300 md:col-span-2">
-          <div className="flex items-center gap-3 mb-3">
-            <Activity className="h-10 w-10 text-green-600" aria-hidden="true" />
-            <h3 className="text-2xl font-bold">Minutos de Ejercicio</h3>
-          </div>
-          <p className="text-5xl font-bold text-gray-900 mb-2">
-            {metMinutes.toLocaleString('es-MX')}
-            <span className="text-3xl text-gray-600 ml-2">min</span>
-          </p>
-          <p className="text-xl text-gray-700">
-            Tiempo equivalente de ejercicio moderado
-          </p>
-          <p className="text-lg text-gray-600 mt-2 bg-gray-100 p-3 rounded">
-            Recomendado: 150 minutos por semana (30 min/día)
-          </p>
-        </div>
-      </div>
-
-      {/* Gráfica de pasos últimos 7 días */}
+      {/* Gráfica de pasos - dinámico según filtro */}
       <SimplifiedBarChart
         data={chartData}
         threshold={{ good: 8000, warning: 5000 }}
-        title="Pasos - Últimos 7 Días"
+        title={`Pasos - Últimos ${daysDiff} Días`}
         yAxisLabel="Pasos"
       />
 
       {/* Consejos para aumentar actividad */}
-      {steps < stepsGoal && (
+      {avgSteps < stepsGoal && (
         <div className="bg-green-50 border-4 border-green-400 rounded-xl p-6">
           <h3 className="text-2xl font-bold text-green-900 mb-3">
             💪 Ideas para Moverte Más
@@ -177,7 +284,7 @@ export default function ActivityPageAccessible() {
       )}
 
       {/* Celebración si alcanzó meta */}
-      {steps >= stepsGoal && (
+      {avgSteps >= stepsGoal && (
         <div className="bg-yellow-50 border-4 border-yellow-400 rounded-xl p-6">
           <h3 className="text-2xl font-bold text-yellow-900 mb-3">
             🎉 ¡Felicidades!

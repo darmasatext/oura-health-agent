@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { DateSelector } from '@/components/dashboard/DateSelector';
 import { MetricCardEnhanced } from '@/components/dashboard/MetricCardEnhanced';
@@ -48,12 +49,45 @@ function getStatus(value: number, threshold: { good: number; warning: number }):
 }
 
 export default function SleepPageBalanced() {
-  const [startDate, setStartDate] = useState(() => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Leer fechas de URL params o usar defaults
+  const getInitialStartDate = () => {
+    const param = searchParams.get('start');
+    if (param) {
+      const date = new Date(param);
+      if (!isNaN(date.getTime())) return date;
+    }
     const date = new Date();
     date.setDate(date.getDate() - 7);
     return date;
-  });
-  const [endDate, setEndDate] = useState(new Date());
+  };
+  
+  const getInitialEndDate = () => {
+    const param = searchParams.get('end');
+    if (param) {
+      const date = new Date(param);
+      if (!isNaN(date.getTime())) return date;
+    }
+    return new Date();
+  };
+  
+  const [startDate, setStartDate] = useState(getInitialStartDate);
+  const [endDate, setEndDate] = useState(getInitialEndDate);
+  
+  // Actualizar URL cuando cambian las fechas
+  useEffect(() => {
+    const start = startDate.toISOString().split('T')[0];
+    const end = endDate.toISOString().split('T')[0];
+    const currentStart = searchParams.get('start');
+    const currentEnd = searchParams.get('end');
+    
+    // Solo actualizar si las fechas cambiaron
+    if (currentStart !== start || currentEnd !== end) {
+      router.replace(`/sleep?start=${start}&end=${end}`, { scroll: false });
+    }
+  }, [startDate, endDate, router, searchParams]);
 
   const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
