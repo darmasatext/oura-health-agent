@@ -44,7 +44,8 @@ function getBigQueryClient() {
 
 /**
  * Serializa valores especiales de BigQuery a formatos simples
- * Convierte {value: "..."} a valores directos recursivamente
+ * El SDK de BigQuery devuelve objetos especiales (BigQueryDate, BigQueryTime, etc.)
+ * que tienen una propiedad 'value' interna
  */
 function serializeValue(value: any): any {
   // Null o undefined
@@ -52,9 +53,20 @@ function serializeValue(value: any): any {
     return value;
   }
   
-  // Si es un objeto con propiedad 'value', extraer el valor
-  if (typeof value === 'object' && 'value' in value && Object.keys(value).length === 1) {
-    return serializeValue(value.value);
+  // Valores primitivos (string, number, boolean)
+  if (typeof value !== 'object') {
+    return value;
+  }
+  
+  // Si tiene método toJSON, usarlo (BigQuery types lo implementan)
+  if (typeof value.toJSON === 'function') {
+    return value.toJSON();
+  }
+  
+  // Si es un objeto con SOLO propiedad 'value', extraerla
+  const keys = Object.keys(value);
+  if (keys.length === 1 && keys[0] === 'value') {
+    return value.value;
   }
   
   // Si es un array, serializar cada elemento
@@ -62,17 +74,12 @@ function serializeValue(value: any): any {
     return value.map(serializeValue);
   }
   
-  // Si es un objeto, serializar recursivamente
-  if (typeof value === 'object') {
-    const serialized: any = {};
-    for (const [key, val] of Object.entries(value)) {
-      serialized[key] = serializeValue(val);
-    }
-    return serialized;
+  // Si es un objeto genérico, serializar recursivamente cada propiedad
+  const serialized: any = {};
+  for (const [key, val] of Object.entries(value)) {
+    serialized[key] = serializeValue(val);
   }
-  
-  // Valores primitivos (string, number, boolean)
-  return value;
+  return serialized;
 }
 
 function serializeRow(row: any): QueryResult {
