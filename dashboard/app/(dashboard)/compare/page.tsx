@@ -61,7 +61,14 @@ export default function ComparePage() {
     );
   }
 
-  const comparisons = wowData?.data || [];
+  // Transformar datos del API (metric_name → metric) para el componente
+  const comparisons = (wowData?.data || []).map((item: any) => ({
+    metric: item.metric_name,
+    current_value: item.current_value,
+    previous_value: item.previous_value,
+    unit: item.unit,
+    change_pct: item.change_pct,
+  }));
 
   // Generar insight automático
   const generateInsight = () => {

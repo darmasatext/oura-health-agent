@@ -9,6 +9,7 @@ export async function GET(request: Request) {
 
     if (type === 'wow') {
       const data = await getWeekOverWeekComparison(userSlug);
+      console.log('[Compare API] Raw data from query:', JSON.stringify(data, null, 2));
       return NextResponse.json(
         { success: true, data },
         { 

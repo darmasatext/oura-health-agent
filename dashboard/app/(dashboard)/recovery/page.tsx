@@ -91,7 +91,7 @@ export default function RecoveryPageBalanced() {
 
   if (loadingData || loadingAvg) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-8 max-w-[1600px] mx-auto">
         <div className="text-center text-xl">{t('recovery.loading')}</div>
       </div>
     );
@@ -99,7 +99,7 @@ export default function RecoveryPageBalanced() {
 
   const recovery = recoveryData?.data || [];
   const averages = averagesData?.data || {};
-  const latest = recovery[recovery.length - 1] || {}; // Último elemento (más reciente)
+  const latest = recovery[0] || {}; // Primer elemento (más reciente con ORDER DESC)
 
   const readinessScore = latest.readiness_score || 0;
   const restingHR = latest.lowest_heart_rate || 0;
@@ -113,7 +113,7 @@ export default function RecoveryPageBalanced() {
   const avgTemp = averages.avg_temp || 0;
 
   // Preparar datos para gráficas (hasta 90 días)
-  const readinessChartData = recovery.slice(0, Math.min(recovery.length, 90)).reverse().map((day: any) => {
+  const readinessChartData = recovery.slice(0, Math.min(recovery.length, 90)).map((day: any) => {
     const date = parseDate(day.calendar_date);
     return {
       label: date ? date.toLocaleDateString(locale, { day: 'numeric', month: 'short' }) : 'N/A',
@@ -122,7 +122,7 @@ export default function RecoveryPageBalanced() {
   });
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
       {/* Header con filtros */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -209,7 +209,7 @@ export default function RecoveryPageBalanced() {
         {/* Gráfica 1: Nivel de recuperación */}
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-4">{t('recovery.readiness_chart_title')}</h3>
-          {recovery.length > 0 && <ReadinessChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
+          {recovery.length > 0 && <ReadinessChart data={recovery.slice(0, Math.min(recovery.length, 90))} />}
           <p className="text-xs text-gray-500 mt-4 text-center">
             {t('recovery.readiness_chart_description')}
           </p>
@@ -218,7 +218,7 @@ export default function RecoveryPageBalanced() {
         {/* Gráfica 2: Variabilidad Cardíaca (HRV) */}
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-4">💓 {t('recovery.hrv_variability_chart')}</h3>
-          {recovery.length > 0 && <HRVVariabilityChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
+          {recovery.length > 0 && <HRVVariabilityChart data={recovery.slice(0, Math.min(recovery.length, 90))} />}
           <p className="text-xs text-gray-500 mt-4 text-center">
             {t('recovery.hrv_description')}
           </p>
@@ -227,7 +227,7 @@ export default function RecoveryPageBalanced() {
         {/* Gráfica 3: Frecuencia Cardíaca en Reposo (RHR) */}
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-4">🫀 {t('recovery.resting_hr_chart')}</h3>
-          {recovery.length > 0 && <RestingHeartRateChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
+          {recovery.length > 0 && <RestingHeartRateChart data={recovery.slice(0, Math.min(recovery.length, 90))} />}
           <p className="text-xs text-gray-500 mt-4 text-center">
             {t('recovery.resting_hr_chart_description')}
           </p>
@@ -236,7 +236,7 @@ export default function RecoveryPageBalanced() {
         {/* Gráfica 4: Frecuencia Cardíaca Promedio */}
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-4">❤️ {t('recovery.average_hr_chart')}</h3>
-          {recovery.length > 0 && <AverageHeartRateChart data={recovery.slice(0, Math.min(recovery.length, 90)).reverse()} />}
+          {recovery.length > 0 && <AverageHeartRateChart data={recovery.slice(0, Math.min(recovery.length, 90))} />}
           <p className="text-xs text-gray-500 mt-4 text-center">
             {t('recovery.average_hr_chart_description')}
           </p>

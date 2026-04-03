@@ -42,7 +42,7 @@ export async function getSleepData(startDate: string, endDate: string, userSlug:
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND sleep_score IS NOT NULL
-    ORDER BY calendar_date ASC
+    ORDER BY calendar_date DESC
     LIMIT 100
   `;
   
@@ -65,7 +65,7 @@ export async function getSleepAverages(days: number, startDate?: string, endDate
       AVG(average_heart_rate) as avg_hr,
       COUNT(*) as total_days
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
-    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)
       AND sleep_score IS NOT NULL
   `;
   
@@ -90,7 +90,7 @@ export async function getRecoveryData(startDate: string, endDate: string, userSl
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND readiness_score IS NOT NULL
-    ORDER BY calendar_date ASC
+    ORDER BY calendar_date DESC
     LIMIT 100
   `;
   
@@ -111,7 +111,7 @@ export async function getRecoveryAverages(days: number, startDate?: string, endD
       COUNT(*) as total_days,
       SUM(CASE WHEN readiness_score >= 85 THEN 1 ELSE 0 END) as optimal_days
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
-    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)
       AND readiness_score IS NOT NULL
   `;
   
@@ -136,7 +136,7 @@ export async function getActivityData(startDate: string, endDate: string, userSl
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND activity_score IS NOT NULL
-    ORDER BY calendar_date ASC
+    ORDER BY calendar_date DESC
     LIMIT 100
   `;
   
@@ -157,7 +157,7 @@ export async function getActivityTotals(days: number = 30, startDate?: string, e
       COUNT(*) as total_days,
       SUM(CASE WHEN steps >= 10000 THEN 1 ELSE 0 END) as days_met_goal
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
-    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)
       AND activity_score IS NOT NULL
   `;
   
@@ -174,7 +174,7 @@ export async function getMostActiveDay(days: number = 30, startDate?: string, en
       steps,
       activity_score
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
-    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)
       AND steps IS NOT NULL
     ORDER BY steps DESC
     LIMIT 1
@@ -200,7 +200,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
         AVG(average_heart_rate) as hr,
         SUM(steps) as steps
       FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
-      WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+      WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 DAY)
     ),
     previous_week AS (
       SELECT 
@@ -212,8 +212,8 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
         AVG(average_heart_rate) as hr,
         SUM(steps) as steps
       FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
-      WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY)
-        AND calendar_date < DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+      WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 13 DAY)
+        AND calendar_date < DATE_SUB(CURRENT_DATE(), INTERVAL 6 DAY)
     )
     SELECT 
       "Calidad de Sueño" as metric_name,
@@ -280,7 +280,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
   `;
   
   const rows = await bqQuery(sql);
-  return bqNormalizeRows(rows);
+  return rows;
 }
 
 // CurrentVsHistorical no implementado aún para multi-user

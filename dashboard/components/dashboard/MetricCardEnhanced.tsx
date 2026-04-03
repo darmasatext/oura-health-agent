@@ -68,7 +68,10 @@ export function MetricCardEnhanced({
       {/* Valor principal */}
       <div className="mb-2">
         <span className="metric-value text-gray-900 dark:text-gray-100">
-          {value.toLocaleString('es-MX')}
+          {value.toLocaleString('es-MX', { 
+            minimumFractionDigits: 0, 
+            maximumFractionDigits: 1 
+          })}
         </span>
         {unit && <span className="text-2xl text-gray-600 dark:text-gray-400 ml-1">{unit}</span>}
       </div>

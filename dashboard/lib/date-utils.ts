@@ -26,13 +26,24 @@ export function parseDate(dateField: any): Date | null {
   if (typeof dateField === 'object' && 'value' in dateField) {
     const dateString = dateField.value;
     if (typeof dateString === 'string') {
+      // Para evitar problemas de timezone con formato YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const parsed = new Date(dateString + 'T00:00:00');
+        return isNaN(parsed.getTime()) ? null : parsed;
+      }
       const parsed = new Date(dateString);
       return isNaN(parsed.getTime()) ? null : parsed;
     }
   }
 
-  // Si es un string directo
+  // Si es un string directo (formato YYYY-MM-DD)
   if (typeof dateField === 'string') {
+    // Para evitar problemas de timezone, parsear como fecha local
+    // Si viene en formato YYYY-MM-DD, agregar 'T00:00:00' para forzar local time
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateField)) {
+      const parsed = new Date(dateField + 'T00:00:00');
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
     const parsed = new Date(dateField);
     return isNaN(parsed.getTime()) ? null : parsed;
   }

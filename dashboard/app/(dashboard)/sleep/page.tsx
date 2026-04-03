@@ -106,8 +106,8 @@ export default function SleepPageBalanced() {
   const sleep = sleepData?.data || [];
   const avg = averages?.data || {};
 
-  // Datos más recientes (último elemento del array ordenado ASC)
-  const latest = sleep[sleep.length - 1] || {};
+  // Datos más recientes (primer elemento del array ordenado DESC)
+  const latest = sleep[0] || {};
   const sleepScore = latest.sleep_score || 0;
   const totalSleep = latest.total_hours || 0;
   const deepSleep = latest.deep_sleep_min || 0;
@@ -129,7 +129,7 @@ export default function SleepPageBalanced() {
   });
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
       {/* Header con filtros */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -219,7 +219,7 @@ export default function SleepPageBalanced() {
         {/* Gráfica 2: Duración (horas por noche) */}
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-4">{t('sleep.hours_per_night')}</h3>
-          <SleepDurationChart data={sleep.slice(0, Math.min(sleep.length, 90)).reverse()} />
+          <SleepDurationChart data={sleep.slice(0, Math.min(sleep.length, 90))} />
           <p className="text-sm text-gray-600 mt-4 text-center">
             🟢 {t('sleep.legend_green')} · 🟡 {t('sleep.legend_yellow')} · 🔴 {t('sleep.legend_red')}
           </p>
@@ -233,7 +233,7 @@ export default function SleepPageBalanced() {
       {sleep.length > 0 && sleep[0].deep_sleep_duration !== undefined && (
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-4">{t('sleep.distribution')}</h3>
-          <SleepPhasesChart data={sleep.slice(0, Math.min(sleep.length, 90)).reverse()} />
+          <SleepPhasesChart data={sleep.slice(0, Math.min(sleep.length, 90))} />
         </Card>
       )}
 

@@ -44,7 +44,7 @@ export function SimplifiedBarChart({
     >
       {title && <h3 className="text-2xl font-bold mb-4">{title}</h3>}
       
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={400}>
         <BarChart 
           data={data}
           margin={{ top: 20, right: 100, left: 20, bottom: data.length > 10 ? 80 : 20 }}

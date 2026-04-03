@@ -126,7 +126,7 @@ export async function getSleepData(startDate: string, endDate: string) {
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND sleep_score IS NOT NULL
-    ORDER BY calendar_date ASC
+    ORDER BY calendar_date DESC
   `;
   
   const rows = await query(sql);
@@ -138,7 +138,7 @@ export async function getSleepAverages(days: number = 30, startDate?: string, en
   // Si hay fechas específicas, usarlas; sino calcular desde hoy
   const dateFilter = (startDate && endDate)
     ? `calendar_date BETWEEN '${startDate}' AND '${endDate}'`
-    : `calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)`;
+    : `calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)`;
     
   const sql = `
     SELECT 
@@ -299,7 +299,7 @@ export async function getRecoveryData(startDate: string, endDate: string) {
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND readiness_score IS NOT NULL
-    ORDER BY calendar_date ASC
+    ORDER BY calendar_date DESC
   `;
   
   const rows = await query(sql);
@@ -311,7 +311,7 @@ export async function getRecoveryAverages(days: number = 30, startDate?: string,
   // Si hay fechas específicas, usarlas; sino calcular desde hoy
   const dateFilter = (startDate && endDate)
     ? `calendar_date BETWEEN '${startDate}' AND '${endDate}'`
-    : `calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)`;
+    : `calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)`;
     
   const sql = `
     SELECT 
@@ -345,7 +345,7 @@ export async function getActivityData(startDate: string, endDate: string) {
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND activity_score IS NOT NULL
-    ORDER BY calendar_date ASC
+    ORDER BY calendar_date DESC
     LIMIT 100
   `;
   
@@ -365,7 +365,7 @@ export async function getActivityTotals(days: number = 30) {
       COUNT(*) as total_days,
       SUM(CASE WHEN steps >= 10000 THEN 1 ELSE 0 END) as days_met_goal
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
-    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)
       AND activity_score IS NOT NULL
   `;
   
@@ -381,7 +381,7 @@ export async function getMostActiveDay(days: number = 30) {
       steps,
       activity_score
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
-    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)
       AND steps IS NOT NULL
     ORDER BY steps DESC
     LIMIT 1
@@ -505,7 +505,7 @@ export async function getHRVTrend(days: number = 7) {
       readiness_score
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE average_hrv_ms IS NOT NULL
-      AND calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+      AND calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)
     ORDER BY calendar_date DESC
   `;
   
@@ -530,7 +530,7 @@ export async function getSleepScorecardHistory(days: number = 7) {
       CASE WHEN average_hrv_ms > 50 THEN 1 ELSE 0 END as hrv_check
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE sleep_score IS NOT NULL
-      AND calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days} DAY)
+      AND calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)
     ORDER BY calendar_date DESC
   `;
   

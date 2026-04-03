@@ -6,6 +6,7 @@ import { saveDateRange, loadDateRange, getDefaultDates, parseLocalDate } from '@
 import { DateSelector } from '@/components/dashboard/DateSelector';
 import { MetricWithContext } from '@/components/dashboard/MetricWithContext';
 import { SimplifiedBarChart } from '@/components/charts/SimplifiedBarChart';
+import { parseDate } from '@/lib/date-utils';
 import { getActivityMessage } from '@/lib/contextual-messages';
 import { ACCESSIBLE_COLORS, getHealthStatus } from '@/lib/accessibility-colors';
 import { Activity, Footprints, Flame, Target } from 'lucide-react';
@@ -74,7 +75,7 @@ export default function ActivityPageAccessible() {
   }
 
   const activity = activityData?.data || [];
-  const latest = activity[activity.length - 1] || {}; // Último elemento (más reciente)
+  const latest = activity[0] || {}; // Primer elemento (más reciente con ORDER DESC)
   
   // Dividir en período actual y período anterior para comparación
   const halfLength = Math.floor(activity.length / 2);
@@ -131,13 +132,16 @@ export default function ActivityPageAccessible() {
 
   // Preparar datos para gráfica de pasos (dinámico según filtro)
   const maxDaysForChart = Math.min(activity.length, 90); // Máximo 90 días
-  const chartData = activity.slice(0, maxDaysForChart).reverse().map((day: any) => ({
-    label: new Date(day.calendar_date).toLocaleDateString(locale, daysDiff <= 7 ? { weekday: 'short' } : { day: 'numeric', month: 'short' }),
-    value: day.steps || 0,
-  }));
+  const chartData = activity.slice(0, maxDaysForChart).map((day: any) => {
+    const date = parseDate(day.calendar_date);
+    return {
+      label: date ? date.toLocaleDateString(locale, daysDiff <= 7 ? { weekday: 'short' } : { day: 'numeric', month: 'short' }) : 'N/A',
+      value: day.steps || 0,
+    };
+  });
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
       {/* Header con filtros */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">

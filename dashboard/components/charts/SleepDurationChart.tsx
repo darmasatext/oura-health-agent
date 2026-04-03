@@ -71,8 +71,11 @@ export function SleepDurationChart({ data }: SleepDurationChartProps) {
   };
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={chartData}>
+    <ResponsiveContainer width="100%" height={400}>
+      <BarChart 
+        data={chartData}
+        margin={{ top: 20, right: 100, left: 20, bottom: chartData.length > 10 ? 80 : 20 }}
+      >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis 
           dataKey="date" 
