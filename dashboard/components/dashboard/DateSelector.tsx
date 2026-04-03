@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -19,6 +19,14 @@ export function DateSelector({ startDate, endDate, onDateChange }: DateSelectorP
     from: startDate,
     to: endDate,
   });
+  
+  // Sincronizar state interno cuando cambian los props (navegación entre páginas)
+  useEffect(() => {
+    setDateRange({
+      from: startDate,
+      to: endDate,
+    });
+  }, [startDate, endDate]);
 
   const presets = [
     { label: 'Últimos 7 días', days: 7 },
