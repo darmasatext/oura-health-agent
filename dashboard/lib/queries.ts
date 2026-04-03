@@ -1,4 +1,5 @@
 import { query } from './bigquery-wrapper';
+import { normalizeRows } from './bigquery-utils';
 
 const DATASET = process.env.BIGQUERY_DATASET || 'oura_biometrics';
 const TABLE = process.env.BIGQUERY_TABLE || 'daily_biometrics_v2';
@@ -21,7 +22,7 @@ export async function getLast7Days() {
   `;
   
   const rows = await query(sql);
-  return rows;
+  return normalizeRows(rows);
 }
 
 // Query: Promedios últimos 7 días vs 7 días anteriores (WoW)
@@ -129,7 +130,7 @@ export async function getSleepData(startDate: string, endDate: string) {
   `;
   
   const rows = await query(sql);
-  return rows;
+  return normalizeRows(rows);
 }
 
 // Query: Promedios de sueño
@@ -245,7 +246,7 @@ export async function getWeekOverWeekComparison() {
   `;
   
   const rows = await query(sql);
-  return rows;
+  return normalizeRows(rows);
 }
 
 // Comparación últimos 7 días vs promedio histórico
@@ -302,7 +303,7 @@ export async function getRecoveryData(startDate: string, endDate: string) {
   `;
   
   const rows = await query(sql);
-  return rows;
+  return normalizeRows(rows);
 }
 
 // Query: Promedios de recuperación
@@ -349,7 +350,7 @@ export async function getActivityData(startDate: string, endDate: string) {
   `;
   
   const rows = await query(sql);
-  return rows;
+  return normalizeRows(rows);
 }
 
 // Query: Totales de actividad
@@ -492,7 +493,7 @@ export async function getWeeklyPattern(startDate?: string, endDate?: string, wee
   `;
   
   const rows = await query(sql);
-  return rows;
+  return normalizeRows(rows);
 }
 
 // Query: HRV histórico últimos 7 días (para tendencias)
@@ -509,7 +510,7 @@ export async function getHRVTrend(days: number = 7) {
   `;
   
   const rows = await query(sql);
-  return rows;
+  return normalizeRows(rows);
 }
 
 // Query: Scorecard últimos N días (para ver evolución)
@@ -534,7 +535,7 @@ export async function getSleepScorecardHistory(days: number = 7) {
   `;
   
   const rows = await query(sql);
-  return rows;
+  return normalizeRows(rows);
 }
 
 // ========================================================================
@@ -690,7 +691,7 @@ export async function getWeeklyPatterns(period: '4w' | '12w' = '4w') {
   `;
 
   const rows = await query(sql);
-  return rows;
+  return normalizeRows(rows);
 }
 
 /**
@@ -723,7 +724,7 @@ export async function getTrends(periodDays: number = 30) {
   `;
 
   const rows = await query(sql);
-  return rows;
+  return normalizeRows(rows);
 }
 
 /**
