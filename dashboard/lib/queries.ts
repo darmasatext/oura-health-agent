@@ -852,3 +852,4 @@ export async function getCustomHomeMetrics(startDate: string, endDate: string) {
   const rows = await query(sql);
   return rows[0] || null;
 }
+// Force redeploy Thu Apr  2 11:16:17 PM CST 2026
