@@ -60,16 +60,16 @@ export function SleepDetailModal({ isOpen, onClose, data }: SleepDetailModalProp
             </div>
           </div>
 
-          {data.bed_time_start && data.bed_time_end && (
+          {data.bedtime_start && data.bedtime_end && (
             <div>
               <h4 className="font-semibold mb-2">Horarios</h4>
               <div className="flex justify-between">
                 <span>A dormir:</span>
-                <span className="font-medium">{data.bed_time_start}</span>
+                <span className="font-medium">{data.bedtime_start}</span>
               </div>
               <div className="flex justify-between">
                 <span>Despertar:</span>
-                <span className="font-medium">{data.bed_time_end}</span>
+                <span className="font-medium">{data.bedtime_end}</span>
               </div>
             </div>
           )}

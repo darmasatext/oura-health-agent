@@ -178,8 +178,10 @@ export default function InsightsPage() {
     ? Math.round((bestDay.avg_sleep_score + bestDay.avg_readiness_score + bestDay.avg_activity_score) / 3)
     : 0;
 
-  // Correlación más fuerte
-  const strongestCorrelation = correlationsData?.[0];
+  // Correlación más fuerte (ordenar por valor absoluto)
+  const strongestCorrelation = correlationsData && correlationsData.length > 0
+    ? correlationsData.sort((a: any, b: any) => Math.abs(b.correlation) - Math.abs(a.correlation))[0]
+    : null;
 
   // Health insights data
   const healthInsights = healthInsightsData?.data || {};

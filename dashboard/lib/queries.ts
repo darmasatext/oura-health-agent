@@ -121,8 +121,8 @@ export async function getSleepData(startDate: string, endDate: string) {
       light_sleep_seconds as light_sleep_duration,
       ROUND(sleep_efficiency_pct, 0) as efficiency,
       ROUND(sleep_latency_seconds / 60.0, 0) as latency_min,
-      bed_time_start,
-      bed_time_end
+      bedtime_start,
+      bedtime_end
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND sleep_score IS NOT NULL

@@ -17,7 +17,6 @@ interface UserContextType {
 const USERS: User[] = [
   { name: 'Fer', slug: 'fer' },
   { name: 'Amparo', slug: 'amparo' },
-  { name: 'Karla', slug: 'karla' },
 ];
 
 const UserContext = createContext<UserContextType | undefined>(undefined);

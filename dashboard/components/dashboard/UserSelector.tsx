@@ -75,14 +75,11 @@ export default function UserSelector() {
             <button
               key={user.slug}
               onClick={() => handleUserSwitch(user.slug)}
-              disabled={user.slug === 'karla'} // Karla aún no disponible
               className={`w-full flex items-center space-x-3 px-4 py-2 text-left
                          transition-colors
                          ${
                            user.slug === currentUser.slug
                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                             : user.slug === 'karla'
-                             ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
                              : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
                          }`}
             >
@@ -94,7 +91,7 @@ export default function UserSelector() {
                                ? 'bg-blue-500 dark:bg-blue-600'
                                : user.slug === 'amparo'
                                ? 'bg-purple-500 dark:bg-purple-600'
-                               : 'bg-gray-400 dark:bg-gray-600'
+                               : 'bg-pink-500 dark:bg-pink-600'
                            }`}
               >
                 {user.name.charAt(0)}
@@ -103,11 +100,6 @@ export default function UserSelector() {
               {/* Nombre */}
               <div className="flex-1">
                 <div className="text-sm font-medium">{user.name}</div>
-                {user.slug === 'karla' && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {t('common.coming_soon')}
-                  </div>
-                )}
               </div>
 
               {/* Checkmark si es el usuario actual */}

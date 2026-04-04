@@ -60,3 +60,8 @@ service-account.json
 gcp-service-account.json
 gcp-key-oneline.txt
 **/user_tokens.json
+
+# ETL Pipeline (trabajo en progreso - issue: sedentary_time_seconds schema error)
+# Estado: ETL v7.1 deployado en GCP pero con error de schema
+# Próximo: Fix schema mismatch en sedentary_time_seconds
+pipeline/

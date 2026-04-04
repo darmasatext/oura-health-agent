@@ -19,8 +19,12 @@ export function Footer() {
           {t('footer.made_with')} <span className="text-red-500 text-lg">❤️</span> {t('footer.by')} <strong className="text-gray-800 dark:text-gray-100">TextAI</strong> {t('footer.and')} <strong className="text-blue-600 dark:text-blue-400">OpenClaw</strong> <span className="text-lg">🦞</span>
         </p>
         
-        {/* Empty div for flex balance */}
-        <div className="flex-shrink-0 w-[100px]"></div>
+        {/* Version - Right */}
+        <div className="flex-shrink-0">
+          <span className="text-sm text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded">
+            v6.0
+          </span>
+        </div>
       </div>
     </footer>
   );

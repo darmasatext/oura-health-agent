@@ -8,8 +8,8 @@ import { MetricCardEnhanced } from '@/components/dashboard/MetricCardEnhanced';
 import { SimplifiedBarChart } from '@/components/charts/SimplifiedBarChart';
 import { ReadinessChart } from '@/components/charts/ReadinessChart';
 import { HRVVariabilityChart } from '@/components/charts/HRVVariabilityChart';
-import { RestingHeartRateChart } from '@/components/charts/RestingHeartRateChart';
-import { AverageHeartRateChart } from '@/components/charts/HRVChart';
+import { StressRecoveryChart } from '@/components/charts/StressRecoveryChart';
+import { TemperatureChart } from '@/components/charts/TemperatureChart';
 import { Card } from '@/components/ui/card';
 import { Heart, Activity, Thermometer, Zap } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
@@ -102,15 +102,20 @@ export default function RecoveryPageBalanced() {
   const latest = recovery[0] || {}; // Primer elemento (más reciente con ORDER DESC)
 
   const readinessScore = latest.readiness_score || 0;
-  const restingHR = latest.lowest_heart_rate || 0;
-  const avgHR = latest.average_heart_rate || 0;
+  const avgHRV = latest.average_hrv_ms || 0;
   const tempDeviation = latest.temperature_deviation_celsius || 0;
   
-  // Promedios
+  // Promedios del período
   const avgReadiness = averages.avg_readiness || 0;
-  const avgRestingHR = averages.avg_hr || 0;
-  const avgHRV = averages.avg_hrv || 0;
+  const avgHRVPeriod = averages.avg_hrv || 0;
   const avgTemp = averages.avg_temp || 0;
+  const avgHeartRate = averages.avg_heart_rate || 0;
+  const avgLowestHeartRate = averages.avg_lowest_heart_rate || 0;
+  
+  // Calcular días estresantes
+  const stressfulDays = recovery.filter((d: any) => d.day_summary === 'stressful').length;
+  const totalDays = recovery.length;
+  const stressfulPercentage = totalDays > 0 ? (stressfulDays / totalDays * 100) : 0;
 
   // Preparar datos para gráficas (hasta 90 días)
   const readinessChartData = recovery.slice(0, Math.min(recovery.length, 90)).map((day: any) => {
@@ -144,7 +149,7 @@ export default function RecoveryPageBalanced() {
       </div>
 
       {/* KPIs principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Heart className="h-6 w-6 text-red-600" />
@@ -161,26 +166,12 @@ export default function RecoveryPageBalanced() {
 
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
-            <Activity className="h-6 w-6 text-blue-600" />
-            <h3 className="text-lg font-semibold">{t('recovery.resting_hr')}</h3>
-          </div>
-          <p className="text-4xl font-bold mb-2">{avgRestingHR.toFixed(0)} {t('recovery.bpm_short')}</p>
-          <p className="text-sm text-gray-600 mb-1">
-            ❤️ {t('recovery.resting_hr_ideal')}
-          </p>
-          <p className="text-xs text-gray-500 mt-2">
-            {t('recovery.resting_hr_description')}
-          </p>
-        </Card>
-
-        <Card className="p-6 border-2">
-          <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Zap className="h-6 w-6 text-yellow-600" />
-            <h3 className="text-lg font-semibold">{t('recovery.heart_rate_variability')}</h3>
+            <h3 className="text-lg font-semibold">{t('recovery.hrv')}</h3>
           </div>
-          <p className="text-4xl font-bold mb-2">{avgHRV.toFixed(1)} <span className="text-lg">{t('recovery.milliseconds')}</span></p>
+          <p className="text-4xl font-bold mb-2">{avgHRVPeriod.toFixed(1)} <span className="text-lg">{t('recovery.milliseconds')}</span></p>
           <p className="text-sm text-gray-600 mb-1">
-            💓 {t('recovery.hrv_average')}
+            💓 {avgHRVPeriod >= 50 ? `✅ ${t('common.excellent')}` : avgHRVPeriod >= 30 ? `⚠️ ${t('recovery.acceptable_range')}` : `🔴 ${t('common.low')}`}
           </p>
           <p className="text-xs text-gray-500 mt-2">
             {t('recovery.hrv_description')}
@@ -190,16 +181,58 @@ export default function RecoveryPageBalanced() {
         <Card className="p-6 border-2">
           <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
             <Thermometer className="h-6 w-6 text-orange-600" />
-            <h3 className="text-lg font-semibold">{t('recovery.temperature_changes')}</h3>
+            <h3 className="text-lg font-semibold">{t('recovery.temperature')}</h3>
           </div>
           <p className="text-4xl font-bold mb-2">
             {avgTemp > 0 ? '+' : ''}{avgTemp.toFixed(2)}°C
           </p>
           <p className="text-sm text-gray-600 mb-1">
-            🌡️ {t('recovery.temp_normal_range')}
+            🌡️ {Math.abs(avgTemp) < 0.3 ? `✅ ${t('heartRate.normal')}` : `⚠️ ${t('recovery.deviation')}`}
           </p>
           <p className="text-xs text-gray-500 mt-2">
             {t('recovery.temp_description')}
+          </p>
+        </Card>
+
+        <Card className="p-6 border-2">
+          <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
+            <Activity className="h-6 w-6 text-red-600" />
+            <h3 className="text-lg font-semibold">{t('recovery.dias_estresantes')}</h3>
+          </div>
+          <p className="text-4xl font-bold mb-2">{stressfulPercentage.toFixed(0)}%</p>
+          <p className="text-sm text-gray-600 mb-1">
+            {stressfulPercentage < 30 ? `✅ ${t('recovery.estres_bajo')}` : stressfulPercentage < 50 ? `⚠️ ${t('recovery.estres_moderado')}` : `🔴 ${t('recovery.estres_alto')}`}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            {t('recovery.dias_estresantes_detalle', { count: stressfulDays, total: totalDays })}
+          </p>
+        </Card>
+
+        <Card className="p-6 border-2">
+          <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
+            <Heart className="h-6 w-6 text-pink-600" />
+            <h3 className="text-lg font-semibold">{t('recovery.ritmo_cardiaco_promedio')}</h3>
+          </div>
+          <p className="text-4xl font-bold mb-2">{avgHeartRate.toFixed(1)} <span className="text-lg">{t('recovery.bpm')}</span></p>
+          <p className="text-sm text-gray-600 mb-1">
+            💓 {avgHeartRate < 60 ? `✅ ${t('common.excellent')}` : avgHeartRate < 70 ? `👍 ${t('common.good')}` : `⚠️ ${t('heartRate.elevated')}`}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            {t('recovery.average_hr_description')}
+          </p>
+        </Card>
+
+        <Card className="p-6 border-2">
+          <div className="flex items-center gap-2 mb-2 min-h-[3.5rem]">
+            <Heart className="h-6 w-6 text-blue-600" />
+            <h3 className="text-lg font-semibold">{t('recovery.ritmo_cardiaco_mas_bajo')}</h3>
+          </div>
+          <p className="text-4xl font-bold mb-2">{avgLowestHeartRate.toFixed(0)} <span className="text-lg">{t('recovery.bpm')}</span></p>
+          <p className="text-sm text-gray-600 mb-1">
+            🌙 {avgLowestHeartRate < 50 ? `✅ ${t('heartRate.very_good')}` : avgLowestHeartRate < 60 ? `👍 ${t('common.good')}` : `⚠️ ${t('heartRate.normal')}`}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            {t('recovery.lowest_hr_description')}
           </p>
         </Card>
       </div>
@@ -217,28 +250,28 @@ export default function RecoveryPageBalanced() {
 
         {/* Gráfica 2: Variabilidad Cardíaca (HRV) */}
         <Card className="p-6">
-          <h3 className="text-xl font-bold mb-4">💓 {t('recovery.hrv_variability_chart')}</h3>
+          <h3 className="text-xl font-bold mb-4">{t('recovery.hrv_variability_chart')}</h3>
           {recovery.length > 0 && <HRVVariabilityChart data={recovery.slice(0, Math.min(recovery.length, 90))} />}
           <p className="text-xs text-gray-500 mt-4 text-center">
-            {t('recovery.hrv_description')}
+            {t('recovery.hrv_chart_description')}
           </p>
         </Card>
 
-        {/* Gráfica 3: Frecuencia Cardíaca en Reposo (RHR) */}
+        {/* Gráfica 3: Estrés vs Recuperación */}
         <Card className="p-6">
-          <h3 className="text-xl font-bold mb-4">🫀 {t('recovery.resting_hr_chart')}</h3>
-          {recovery.length > 0 && <RestingHeartRateChart data={recovery.slice(0, Math.min(recovery.length, 90))} />}
+          <h3 className="text-xl font-bold mb-4">{t('recovery.stress_recovery_chart')}</h3>
+          {recovery.length > 0 && <StressRecoveryChart data={recovery.slice(0, Math.min(recovery.length, 30))} />}
           <p className="text-xs text-gray-500 mt-4 text-center">
-            {t('recovery.resting_hr_chart_description')}
+            {t('recovery.stress_recovery_description')}
           </p>
         </Card>
 
-        {/* Gráfica 4: Frecuencia Cardíaca Promedio */}
+        {/* Gráfica 4: Temperatura Basal */}
         <Card className="p-6">
-          <h3 className="text-xl font-bold mb-4">❤️ {t('recovery.average_hr_chart')}</h3>
-          {recovery.length > 0 && <AverageHeartRateChart data={recovery.slice(0, Math.min(recovery.length, 90))} />}
+          <h3 className="text-xl font-bold mb-4">{t('recovery.temperature_chart')}</h3>
+          {recovery.length > 0 && <TemperatureChart data={recovery.slice(0, Math.min(recovery.length, 30))} />}
           <p className="text-xs text-gray-500 mt-4 text-center">
-            {t('recovery.average_hr_chart_description')}
+            {t('recovery.temperature_chart_description')}
           </p>
         </Card>
       </div>

@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: '/sleep', labelKey: 'nav.sleep', icon: Moon },
   { href: '/activity', labelKey: 'nav.activity', icon: Activity },
   { href: '/recovery', labelKey: 'nav.recovery', icon: Heart },
+  { href: '/heart-rate', labelKey: 'nav.heartRate', icon: Activity },
   { href: '/insights', labelKey: 'nav.insights', icon: Sparkles },
   { href: '/compare', labelKey: 'nav.compare', icon: TrendingUp },
 ] as const;
@@ -47,9 +48,6 @@ export function Navigation() {
               />
               <span>Oura Dashboard</span>
             </Link>
-            <span className="text-sm text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-              v5.10
-            </span>
             
             {/* User Selector - desktop */}
             <div className="hidden md:block">

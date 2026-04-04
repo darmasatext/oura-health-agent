@@ -34,11 +34,10 @@ export async function getSleepData(startDate: string, endDate: string, userSlug:
       sleep_efficiency_pct,
       sleep_latency_seconds / 60.0 AS sleep_latency_min,
       sleep_latency_seconds / 60.0 AS sleep_latency_minutes,
-      bed_time_start,
-      bed_time_end,
+      bedtime_start,
+      bedtime_end,
       average_heart_rate,
-      lowest_heart_rate,
-      respiratory_rate_bpm
+      lowest_heart_rate_bpm
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND sleep_score IS NOT NULL
@@ -82,14 +81,15 @@ export async function getRecoveryData(startDate: string, endDate: string, userSl
     SELECT 
       calendar_date,
       readiness_score,
-      average_heart_rate,
-      lowest_heart_rate,
       average_hrv_ms,
       temperature_deviation_celsius,
-      resilience_level
+      stress_high_duration_seconds,
+      recovery_time_seconds,
+      day_summary,
+      average_heart_rate,
+      lowest_heart_rate_bpm
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
-      AND readiness_score IS NOT NULL
     ORDER BY calendar_date DESC
     LIMIT 100
   `;
@@ -104,15 +104,17 @@ export async function getRecoveryAverages(days: number, startDate?: string, endD
   const sql = `
     SELECT 
       AVG(readiness_score) as avg_readiness,
-      AVG(average_heart_rate) as avg_hr,
-      AVG(lowest_heart_rate) as avg_rhr,
       AVG(average_hrv_ms) as avg_hrv,
       AVG(temperature_deviation_celsius) as avg_temp,
+      AVG(stress_high_duration_seconds) as avg_stress_duration,
+      AVG(recovery_time_seconds) as avg_recovery_time,
+      AVG(average_heart_rate) as avg_heart_rate,
+      AVG(lowest_heart_rate_bpm) as avg_lowest_heart_rate,
       COUNT(*) as total_days,
-      SUM(CASE WHEN readiness_score >= 85 THEN 1 ELSE 0 END) as optimal_days
+      SUM(CASE WHEN readiness_score >= 85 THEN 1 ELSE 0 END) as optimal_days,
+      SUM(CASE WHEN day_summary = 'stressful' THEN 1 ELSE 0 END) as stressful_days
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)
-      AND readiness_score IS NOT NULL
   `;
   
   const rows = await bqQuery(sql);
@@ -131,8 +133,8 @@ export async function getActivityData(startDate: string, endDate: string, userSl
       steps,
       active_calories,
       total_calories,
-      sedentary_time_seconds,
-      equivalent_walking_distance_meters
+      -- sedentary_time_seconds,  -- Temporarily disabled
+      -- equivalent_walking_distance_meters  -- Not available
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
     WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
       AND activity_score IS NOT NULL
@@ -153,7 +155,7 @@ export async function getActivityTotals(days: number = 30, startDate?: string, e
       SUM(steps) as total_steps,
       SUM(active_calories) as total_calories,
       AVG(sedentary_time_seconds / 3600.0) as avg_sedentary_hours,
-      SUM(equivalent_walking_distance_meters) as total_distance_meters,
+      SUM(-- equivalent_walking_distance_meters  -- Not available) as total_distance_meters,
       COUNT(*) as total_days,
       SUM(CASE WHEN steps >= 10000 THEN 1 ELSE 0 END) as days_met_goal
     FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
@@ -289,6 +291,47 @@ export async function getCurrentVsHistorical(userSlug: string = 'fer') {
 }
 
 // Re-exportar funciones de Gold Layer desde queries.ts (no multi-user aún)
+// ===== HEART RATE QUERIES =====
+
+export async function getHeartRateData(startDate: string, endDate: string, userSlug: string = 'fer') {
+  const TABLE = `daily_biometrics_${userSlug}`;
+  
+  const sql = `
+    SELECT 
+      calendar_date,
+      average_heart_rate,
+      lowest_heart_rate_bpm,
+      sleep_score
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE calendar_date BETWEEN '${startDate}' AND '${endDate}'
+      AND average_heart_rate IS NOT NULL
+    ORDER BY calendar_date DESC
+    LIMIT 100
+  `;
+  
+  const rows = await bqQuery(sql);
+  return bqNormalizeRows(rows);
+}
+
+export async function getHeartRateAverages(days: number, startDate?: string, endDate?: string, userSlug: string = 'fer') {
+  const TABLE = `daily_biometrics_${userSlug}`;
+  
+  const sql = `
+    SELECT 
+      AVG(average_heart_rate) as avg_heart_rate,
+      AVG(lowest_heart_rate_bpm) as avg_lowest_heart_rate,
+      MIN(average_heart_rate) as min_heart_rate,
+      MAX(average_heart_rate) as max_heart_rate,
+      COUNT(*) as total_days
+    FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ${days - 1} DAY)
+      AND average_heart_rate IS NOT NULL
+  `;
+  
+  const rows = await bqQuery(sql);
+  return rows[0];
+}
+
 import * as queries from './queries';
 export const {
   getHRVAlert,

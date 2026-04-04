@@ -90,7 +90,7 @@ async function getCorrelations(userSlug: string) {
       readiness_score,
       activity_score,
       total_sleep_seconds / 3600.0 as sleep_hours,
-      lowest_heart_rate as resting_heart_rate,
+      lowest_heart_rate_bpm as resting_heart_rate,
       average_heart_rate
     FROM \`${PROJECT_ID}.${DATASET}.${getTableForUser(userSlug)}\`
     WHERE sleep_score IS NOT NULL
@@ -103,6 +103,9 @@ async function getCorrelations(userSlug: string) {
 
   // Calcular correlaciones simples
   const correlations = calculateCorrelations(rows);
+
+  // Ordenar por valor absoluto de correlación (de mayor a menor)
+  correlations.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
 
   return NextResponse.json(correlations);
 }
