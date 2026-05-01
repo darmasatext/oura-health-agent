@@ -6,7 +6,7 @@
 import { query as bqQuery } from './bigquery-wrapper';
 import { normalizeRows as bqNormalizeRows } from './bigquery-utils';
 
-const PROJECT_ID = process.env.BIGQUERY_PROJECT_ID || 'last-240000';
+const PROJECT_ID = process.env.BIGQUERY_PROJECT_ID || ((() => { throw new Error('BIGQUERY_PROJECT_ID not set') })());
 const DATASET = process.env.BIGQUERY_DATASET || 'oura_biometrics';
 
 // ===== SLEEP QUERIES =====
