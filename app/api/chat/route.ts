@@ -14,11 +14,11 @@ function getBQClient() {
       creds = JSON.parse(credJson);
     }
     return new BigQuery({
-      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || "last-240000",
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || (() => { throw new Error("GOOGLE_CLOUD_PROJECT_ID not set") })(),
       credentials: creds,
     });
   }
-  return new BigQuery({ projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || "last-240000" });
+  return new BigQuery({ projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || (() => { throw new Error("GOOGLE_CLOUD_PROJECT_ID not set") })() });
 }
 
 // ── Detecta de qué usuario trata la pregunta ─────────────────
@@ -32,7 +32,7 @@ function detectUser(message: string): "amparo" | "fer" | "both" {
 // ── Fetch completo del datalake ───────────────────────────────
 async function fetchHealthContext(user: "amparo" | "fer" | "both") {
   const bq = getBQClient();
-  const project = process.env.GOOGLE_CLOUD_PROJECT_ID || "last-240000";
+  const project = process.env.GOOGLE_CLOUD_PROJECT_ID || (() => { throw new Error("GOOGLE_CLOUD_PROJECT_ID not set") })();
   const users = user === "both" ? ["amparo", "fer"] : [user];
   const context: Record<string, object> = {};
 
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
     const healthData = await fetchHealthContext(targetUser);
 
     const systemPrompt = `Eres un asistente de salud amigable y empático que analiza datos biométricos del Oura Ring.
-Tienes acceso al historial COMPLETO de datos de salud de Amparo y Fernando (Fer) desde BigQuery.
+Tienes acceso al historial COMPLETO de datos de salud de los usuarios registrados desde BigQuery.
 
 DATOS COMPLETOS DEL DATALAKE:
 ${JSON.stringify(healthData, null, 2)}
