@@ -79,7 +79,7 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "¡Hola! Soy tu asistente de salud. Puedo contarte sobre los datos de Amparo o Fer. ¿En qué te ayudo?",
+      content: "¡Hola! Soy tu asistente de salud. Puedo contarte datos biométricos de los usuarios registrados. ¿En qué te ayudo?",
       timestamp: new Date(),
     },
   ]);
@@ -234,7 +234,7 @@ export default function ChatWidget() {
           {/* Suggested questions */}
           {messages.length === 1 && (
             <div className="px-4 pb-2 flex flex-wrap gap-1 bg-gray-50 dark:bg-gray-900">
-              {["¿Cómo durmió Amparo?", "HRV de Fer esta semana", "¿Quién está más activo?"].map((q) => (
+              {["¿Cómo dormí ayer?", "Variabilidad cardíaca esta semana", "¿Quién está más activo?"].map((q) => (
                 <button key={q} onClick={() => setInput(q)}
                   className="text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full px-2 py-1 text-gray-600 dark:text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors">
                   {q}
@@ -249,7 +249,7 @@ export default function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Pregunta sobre la salud de Amparo o Fer..."
+              placeholder="Pregunta sobre tu salud o compara usuarios..."
               rows={1}
               className="flex-1 resize-none rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 px-3 py-2 text-sm focus:outline-none focus:border-blue-400 max-h-20"
               style={{ minHeight: "36px" }}
