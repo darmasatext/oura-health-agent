@@ -6,7 +6,7 @@
 import { query as bqQuery } from './bigquery-wrapper';
 import { normalizeRows as bqNormalizeRows } from './bigquery-utils';
 
-const PROJECT_ID = process.env.BIGQUERY_PROJECT_ID || ((() => { throw new Error('BIGQUERY_PROJECT_ID not set') })());
+const PROJECT_ID = process.env.BIGQUERY_PROJECT_ID || 'last-240000';
 const DATASET = process.env.BIGQUERY_DATASET || 'oura_biometrics';
 
 // ===== SLEEP QUERIES =====
@@ -200,14 +200,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
         AVG(total_sleep_seconds / 3600.0) as hours,
         AVG(sleep_efficiency_pct) as efficiency,
         AVG(average_heart_rate) as hr,
-        SUM(steps) as steps,
-        COUNT(sleep_score) as sleep_days,
-        COUNT(readiness_score) as readiness_days,
-        COUNT(activity_score) as activity_days,
-        COUNT(total_sleep_seconds) as hours_days,
-        COUNT(sleep_efficiency_pct) as efficiency_days,
-        COUNT(average_heart_rate) as hr_days,
-        COUNT(steps) as steps_days
+        SUM(steps) as steps
       FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
       WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 DAY)
     ),
@@ -219,14 +212,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
         AVG(total_sleep_seconds / 3600.0) as hours,
         AVG(sleep_efficiency_pct) as efficiency,
         AVG(average_heart_rate) as hr,
-        SUM(steps) as steps,
-        COUNT(sleep_score) as sleep_days,
-        COUNT(readiness_score) as readiness_days,
-        COUNT(activity_score) as activity_days,
-        COUNT(total_sleep_seconds) as hours_days,
-        COUNT(sleep_efficiency_pct) as efficiency_days,
-        COUNT(average_heart_rate) as hr_days,
-        COUNT(steps) as steps_days
+        SUM(steps) as steps
       FROM \`${PROJECT_ID}.${DATASET}.${TABLE}\`
       WHERE calendar_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 13 DAY)
         AND calendar_date < DATE_SUB(CURRENT_DATE(), INTERVAL 6 DAY)
@@ -236,9 +222,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
       c.sleep as current_value,
       p.sleep as previous_value,
       ((c.sleep - p.sleep) / NULLIF(p.sleep, 0) * 100) as change_pct,
-      "score" as unit,
-      c.sleep_days as current_days,
-      p.sleep_days as previous_days
+      "score" as unit
     FROM current_week c
     LEFT JOIN previous_week p ON TRUE
     UNION ALL
@@ -247,9 +231,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
       c.readiness,
       p.readiness,
       ((c.readiness - p.readiness) / NULLIF(p.readiness, 0) * 100),
-      "score",
-      c.readiness_days,
-      p.readiness_days
+      "score"
     FROM current_week c
     LEFT JOIN previous_week p ON TRUE
     UNION ALL
@@ -258,9 +240,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
       c.activity,
       p.activity,
       ((c.activity - p.activity) / NULLIF(p.activity, 0) * 100),
-      "score",
-      c.activity_days,
-      p.activity_days
+      "score"
     FROM current_week c
     LEFT JOIN previous_week p ON TRUE
     UNION ALL
@@ -269,9 +249,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
       c.hours,
       p.hours,
       ((c.hours - p.hours) / NULLIF(p.hours, 0) * 100),
-      "horas",
-      c.hours_days,
-      p.hours_days
+      "horas"
     FROM current_week c
     LEFT JOIN previous_week p ON TRUE
     UNION ALL
@@ -280,9 +258,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
       c.efficiency,
       p.efficiency,
       ((c.efficiency - p.efficiency) / NULLIF(p.efficiency, 0) * 100),
-      "%",
-      c.efficiency_days,
-      p.efficiency_days
+      "%"
     FROM current_week c
     LEFT JOIN previous_week p ON TRUE
     UNION ALL
@@ -291,9 +267,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
       c.hr,
       p.hr,
       ((c.hr - p.hr) / NULLIF(p.hr, 0) * 100),
-      "bpm",
-      c.hr_days,
-      p.hr_days
+      "bpm"
     FROM current_week c
     LEFT JOIN previous_week p ON TRUE
     UNION ALL
@@ -302,9 +276,7 @@ export async function getWeekOverWeekComparison(userSlug: string = 'fer') {
       c.steps,
       p.steps,
       ((c.steps - p.steps) / NULLIF(p.steps, 0) * 100),
-      "pasos",
-      c.steps_days,
-      p.steps_days
+      "pasos"
     FROM current_week c
     LEFT JOIN previous_week p ON TRUE
   `;

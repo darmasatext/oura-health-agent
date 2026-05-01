@@ -22,13 +22,11 @@ export function HeartRateTrendChart({ data }: HeartRateTrendChartProps) {
         <p className="font-semibold mb-1">{payload[0].payload.label}</p>
         <div className="space-y-1">
           <p className="text-sm text-pink-600">
-            {t('heartRate.tooltip_promedio')}: <span className="font-bold">{payload[0]?.value?.toFixed(1)} {t('heartRate.bpm')}</span>
+            {t('heartRate.tooltip_promedio')}: <span className="font-bold">{payload[0].value.toFixed(1)} {t('heartRate.bpm')}</span>
           </p>
-          {payload[1] && (
-            <p className="text-sm text-blue-600">
-              {t('heartRate.tooltip_mas_bajo')}: <span className="font-bold">{payload[1]?.value} {t('heartRate.bpm')}</span>
-            </p>
-          )}
+          <p className="text-sm text-blue-600">
+            {t('heartRate.tooltip_mas_bajo')}: <span className="font-bold">{payload[1].value} {t('heartRate.bpm')}</span>
+          </p>
         </div>
       </div>
     );

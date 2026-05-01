@@ -3,7 +3,7 @@ import { normalizeRows } from './bigquery-utils';
 
 const DATASET = process.env.BIGQUERY_DATASET || 'oura_biometrics';
 const TABLE = process.env.BIGQUERY_TABLE || 'daily_biometrics_v2';
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || ((() => { throw new Error('GOOGLE_CLOUD_PROJECT_ID not set') })());
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'last-240000';
 
 // Query: Últimos 7 días
 export async function getLast7Days() {
@@ -590,40 +590,6 @@ export async function getHomeKPIs(periodDays: number = 7) {
  * Uses Gold view: hrv_alert_current
  * Incluye zona HRV, categoría readiness, recomendación automática
  */
-// Query en tiempo real desde daily_biometrics_{user} — evita tabla Gold desactualizada
-export async function getLiveHRV(userSlug: string = 'fer') {
-  const table = `daily_biometrics_${userSlug}`;
-  const sql = `
-    SELECT
-      calendar_date,
-      average_hrv_ms AS hrv,
-      readiness_score,
-      sleep_score,
-      CASE
-        WHEN average_hrv_ms > 55 THEN 'green'
-        WHEN average_hrv_ms >= 45 THEN 'yellow'
-        ELSE 'red'
-      END AS hrv_zone,
-      CASE
-        WHEN average_hrv_ms > 55 THEN 'good'
-        WHEN average_hrv_ms >= 45 THEN 'warning'
-        ELSE 'attention'
-      END AS readiness_category,
-      CASE
-        WHEN average_hrv_ms > 55 THEN '🟢'
-        WHEN average_hrv_ms >= 45 THEN '🟡'
-        ELSE '🔴'
-      END AS zone_emoji,
-      CURRENT_TIMESTAMP() AS last_updated
-    FROM \`${PROJECT_ID}.${DATASET}.${table}\`
-    WHERE average_hrv_ms IS NOT NULL
-    ORDER BY calendar_date DESC
-    LIMIT 1
-  `;
-  const rows = await query(sql);
-  return rows[0] || null;
-}
-
 export async function getHRVAlert() {
   const sql = `
     SELECT 

@@ -8,7 +8,6 @@ interface ComparisonCardProps {
   previousValue: number | null;
   changePct: number | null;
   unit?: string;
-  extraInfo?: string;
 }
 
 export function ComparisonCard({ 
@@ -16,8 +15,7 @@ export function ComparisonCard({
   currentValue, 
   previousValue, 
   changePct, 
-  unit = '',
-  extraInfo,
+  unit = '' 
 }: ComparisonCardProps) {
   const { t, language } = useLanguage();
   const locale = language === 'es' ? 'es-MX' : 'en-US';
@@ -98,12 +96,6 @@ export function ComparisonCard({
           {changePct === null ? t('compare.no_data') : isPositive ? t('compare.improvement') : isNeutral ? t('compare.no_change') : t('compare.decrease')}
         </span>
       </div>
-
-      {extraInfo && (
-        <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-          {extraInfo}
-        </p>
-      )}
     </Card>
   );
 }
