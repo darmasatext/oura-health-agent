@@ -3,7 +3,7 @@ import { normalizeRows } from './bigquery-utils';
 
 const DATASET = process.env.BIGQUERY_DATASET || 'oura_biometrics';
 const TABLE = process.env.BIGQUERY_TABLE || 'daily_biometrics_v2';
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'last-240000';
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || ((() => { throw new Error('GOOGLE_CLOUD_PROJECT_ID not set') })());
 
 // Query: Últimos 7 días
 export async function getLast7Days() {
