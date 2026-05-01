@@ -128,25 +128,25 @@ export default function InsightsPage() {
   };
 
   const { data: weekdayData, isLoading: weekdayLoading } = useQuery({
-    queryKey: ['weekday-analysis', currentUser.slug],
+    queryKey: ['weekday-analysis'],
     queryFn: () => fetchWeekdayAnalysis(currentUser.slug),
     ...cacheConfig,
   });
 
   const { data: correlationsData, isLoading: correlationsLoading } = useQuery({
-    queryKey: ['correlations', currentUser.slug],
+    queryKey: ['correlations'],
     queryFn: () => fetchCorrelations(currentUser.slug),
     ...cacheConfig,
   });
 
   const { data: streaksData, isLoading: streaksLoading } = useQuery({
-    queryKey: ['streaks', currentUser.slug],
+    queryKey: ['streaks'],
     queryFn: () => fetchStreaks(currentUser.slug),
     ...cacheConfig,
   });
 
   const { data: superDaysData, isLoading: superDaysLoading } = useQuery({
-    queryKey: ['superdays', currentUser.slug],
+    queryKey: ['superdays'],
     queryFn: () => fetchSuperDays(currentUser.slug),
     ...cacheConfig,
   });
@@ -421,8 +421,8 @@ export default function InsightsPage() {
             <>
               <CorrelationChart
                 data={correlationsData[0].data}
-                xKey={correlationsData[0].metric_x || 'sleep_hours'}
-                yKey={correlationsData[0].metric_y || 'readiness_score'}
+                xKey="sleep_score"
+                yKey="readiness_score"
                 xLabel={t('insights.correlation_x_label')}
                 yLabel={t('insights.correlation_y_label')}
               />

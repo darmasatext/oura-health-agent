@@ -68,19 +68,7 @@ export default function ComparePage() {
     previous_value: item.previous_value,
     unit: item.unit,
     change_pct: item.change_pct,
-    current_days: item.current_days ?? null,
-    previous_days: item.previous_days ?? null,
   }));
-
-  // Badge de datos parciales: muestra aviso si hay menos de 5 días con datos
-  const DataBadge = ({ days }: { days: number | null }) => {
-    if (days === null || days >= 5) return null;
-    return (
-      <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 border border-amber-300">
-        ⚠️ {days} día{days !== 1 ? 's' : ''}
-      </span>
-    );
-  };
 
   // Generar insight automático
   const generateInsight = () => {
@@ -119,53 +107,18 @@ export default function ComparePage() {
       <div>
         <h2 className="text-2xl font-semibold mb-4">{t('compare.week_vs_previous')}</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {comparisons.length === 0 ? (
-            <div className="col-span-3 rounded-lg bg-amber-50 border border-amber-200 p-6 text-center">
-              <p className="text-amber-800 font-medium">⚠️ Sin datos disponibles para comparar</p>
-              <p className="text-amber-700 text-sm mt-1">No se encontraron registros esta semana — verifica la sincronización de tu Oura Ring.</p>
-            </div>
-          ) : (
-            comparisons.map((comp: any) => {
-              const isTotalSteps = comp.metric === 'Pasos Totales';
-              const dailyAvg = isTotalSteps && comp.current_days && comp.current_days > 0
-                ? Math.round(comp.current_value / comp.current_days)
-                : null;
-              const previousNullAndSleep = comp.previous_value === null &&
-                (comp.metric === 'Calidad de Sueño' || comp.metric === 'Horas de Sueño' || comp.metric === 'Eficiencia del Sueño');
-              const previousNullAndReadiness = comp.previous_value === null && comp.metric === 'Recuperación';
-
-              return (
-                <div key={comp.metric} className="relative">
-                  {/* Badge de días parciales */}
-                  {comp.current_days !== null && comp.current_days < 5 && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <DataBadge days={comp.current_days} />
-                    </div>
-                  )}
-                  <ComparisonCard
-                    metric={comp.metric}
-                    currentValue={comp.current_value}
-                    previousValue={comp.previous_value}
-                    changePct={comp.change_pct}
-                    unit={comp.unit}
-                    extraInfo={
-                      comp.previous_value === null
-                        ? previousNullAndSleep
-                          ? 'Sin datos de sueño semana anterior — verifica sincronización de Oura'
-                          : previousNullAndReadiness
-                          ? 'Sin datos de recuperación semana anterior — verifica sincronización de Oura'
-                          : 'Sin datos semana anterior — verifica sincronización de Oura'
-                        : isTotalSteps && dailyAvg !== null
-                        ? `Promedio diario: ${dailyAvg.toLocaleString()} pasos/día (${comp.current_days} día${comp.current_days !== 1 ? 's' : ''})`
-                        : comp.current_days !== null && comp.current_days < 5
-                        ? `Basado en ${comp.current_days} día${comp.current_days !== 1 ? 's' : ''} con datos`
-                        : undefined
-                    }
-                  />
-                </div>
-              );
-            })
-          )}
+          {comparisons.map((comp: any) => {
+            return (
+              <ComparisonCard
+                key={comp.metric}
+                metric={comp.metric}
+                currentValue={comp.current_value}
+                previousValue={comp.previous_value}
+                changePct={comp.change_pct}
+                unit={comp.unit}
+              />
+            );
+          })}
         </div>
       </div>
 

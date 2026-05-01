@@ -6,7 +6,6 @@ import {
   getHRVTrend,
   getSleepScorecardHistory,
   // Gold layer functions
-  getLiveHRV,
   getHRVAlert,
   getSleepScorecard,
   getWeeklyPatterns,
@@ -26,7 +25,6 @@ export async function GET(request: NextRequest) {
     const weeks = parseInt(searchParams.get('weeks') || '4');
     const start = searchParams.get('start');
     const end = searchParams.get('end');
-    const user = searchParams.get('user') || 'fer';
 
     let data: any = {};
 
@@ -92,9 +90,9 @@ export async function GET(request: NextRequest) {
         break;
 
       case 'all':
-        // Todos los datos para el dashboard
+        // Todos los datos para el dashboard (MIGRANDO A GOLD)
         const [hrvData, scorecardData, recoveryData, stressData] = await Promise.all([
-          getLiveHRV(user),
+          getHRVAlert(),
           getSleepScorecard(days),
           getRecoveryFactors(),
           getStressBalance(),

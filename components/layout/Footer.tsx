@@ -22,7 +22,7 @@ export function Footer() {
         {/* Version - Right */}
         <div className="flex-shrink-0">
           <span className="text-sm text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded">
-            v7.0
+            v6.0
           </span>
         </div>
       </div>
