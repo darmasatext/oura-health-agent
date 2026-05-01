@@ -417,10 +417,10 @@ export default function InsightsPage() {
         <CardContent>
           {correlationsLoading ? (
             <div className="text-center py-8 text-muted-foreground">{t('insights.loading_correlations')}</div>
-          ) : correlationsData?.[0]?.data ? (
+          ) : correlationsData?.length > 0 ? (
             <>
               <CorrelationChart
-                data={correlationsData[0].data}
+                data={(correlationsData.find((c: any) => c.metric_x === 'sleep_score') || correlationsData[0]).data}
                 xKey="sleep_score"
                 yKey="readiness_score"
                 xLabel={t('insights.correlation_x_label')}
@@ -538,3 +538,4 @@ export default function InsightsPage() {
     </div>
   );
 }
+
